@@ -1,0 +1,69 @@
+---
+title: "R Notebook - Intro to R"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Vector Math(s)
+In general, R is "good" at vector MATH(s).
+
+```{r}
+3+4
+10-3
+1:10
+1:10 + 5
+1:10 + 5:15  ####################   Warning, CONTINUES #####
+1:10 + 5:14  ## pair-wise addition
+1:10 * 5:14  ## pair-wise multiplication
+1:10 / 5:14 # pair-wise division 
+1:10 %*% 5:14  ## this is a matrix coercion (NOT pair-wise)
+```
+
+# Functions of Vectors of Numbers
+Functions can be used "generally" in this vector form.  When you write a function, you should try and make it work in this manner.
+```{r}
+# 3*(1:10)^2 - 2(1:10)   ####################   ERROR, STOPS #####
+3^2
+3*(1:10)^2 - 2*(1:10)
+```
+
+# I don't like "list apply" functions
+R has some built in "list apply" functions as noted below.  If you pay careful attention, you can see the advantage of just writing your own function.
+```{r}
+#lapply(1:10, 3x^2-2x)  ####################   ERROR, STOPS #####
+#lapply(1:10, FUN=3x^2-2x)
+#lapply(1:10, FUN=3*x^2-2*x)
+#lapply(x=1:10, FUN=3*x^2-2*x)
+#?lapply
+#lapply(x=1:10, FUN=function(x) {3*x^2-2*x})
+lapply(1:10, FUN=function(x) {3*x^2-2*x})
+unlist(lapply(1:10, FUN=function(x) {3*x^2-2*x}))
+```
+
+# I prefer using "C-based" language structures
+In general, I avoid "list apply" functions and show the standard "C" manner of writing a function (often with a FOR loop).
+```{r}
+foo = function(x) { 3*x^2 - 2*x; }
+foo(1:10)
+```
+
+# Multiply ways to do something
+This gives you more flexibility in your coding environment.  This is called "variadic" programming.
+NOTE: CNTRL-ALT-"I" (the letter i)... this will auto-populate a new R-environment in your notebook.
+
+```{r}
+x = 1:10;
+foo(x);
+3*x^2 - 2*x;
+```
+
+
+
+Notice the advantage of putting our code in a R-notebook.  We can run one chunk at a time and review and break down our code as necessary.
+
+The code stops in the notebook section on the first error WHEN KNITTING.  This can be annoying if you want to demonstrate errors, but in generally this helps with "debugging" code in a SANDBOX.
+
+Notice the "Knitted HTML" Notebook is a nice summary of your work.  If you properly document as text and as comments, they can be very helpful.  You can return to a notebook and recall a particular task or way of doing something.
+
+CHEERS.

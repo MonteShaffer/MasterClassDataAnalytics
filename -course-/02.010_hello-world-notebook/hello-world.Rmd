@@ -8,6 +8,8 @@ output:
 ---
 
 # What is a library?
+
+## Number of Cores
 ```{r}
 # Cntrl-Alt-I is your friend
 
@@ -19,6 +21,86 @@ parallel::detectCores();
 ```
 Can you find another library that counts cores?  Is it a core or a thread?  My laptop is a QUAD-core.
 
+## Prime Numbers
+
+```{r}
+library(pracma);
+pracma::primes(22);
+```
+
+
+```{r}
+prime.pracmaPrimes = function(n, first=FALSE)
+	{
+	# this duplicates the primary logic of pracma::primes
+	# by computing 'sqrt' one time, it speeds up things 'slightly'
+	# it allows for firstN or fromN with first=FLAG
+	gn = n;
+	if(first) { gn = ceiling( n * log(n) + n * log(log(n)) ); }
+	gn.sqrt = floor( sqrt(gn) );  # needs to round down so the "seq by k" doesn't break ...
+
+	p = seq(1, gn, by = 2); # odd numbers
+    q = length(p);
+    p[1] = 2; 	# replace 1 with 2 (prime)
+				# 9 is the first non-prime?
+	if(gn >= 9)
+		{
+		for (k in seq(3, gn.sqrt, by = 2) )
+			{
+			k.idx = (k + 1)/2;
+			if (p[k.idx] != 0)
+				{
+				# using a squared rule on indexes ?
+				k2.idx = (k * k + 1)/2;
+
+				# cat("\n", " k = ", k, "... (k+1/2) = ", k.idx, "... (k * k + 1)/2 = ", k2.idx, "\n");
+
+				p[ seq(k2.idx, q, by = k) ] = 0;
+				}
+			}
+		}
+
+	p = p[p > 0];
+
+	if(first)
+		{
+		p[1:n];
+		} else {
+				p[p < n];
+				}
+	}
+```
+
+
+```{r}
+prime.pracmaPrimes(22);
+```
+
+```{r}
+prime.pracmaPrimes(22, first=TRUE);
+```
+
+```{r}
+library(microbenchmark);
+microbenchmark::microbenchmark(pracma::primes(22) , prime.pracmaPrimes(22), prime.pracmaPrimes(22, first=TRUE) )
+```
+One line of code is inefficient in 'pracma', can you find it?
+
+```{r}
+pracma::primes
+```
+The 'sqrt(n)' is not changing but is being computed several times in the 'k' sequence.
+
+# Does 'hello world' work?
+
+```{r}
+hello();
+```
+
+```{r}
+source("https://raw.githubusercontent.com/MonteShaffer/MasterClassDataAnalytics/main/functions/functions-hello.R")
+hello();
+```
 
 # Does Python Work?
 

@@ -123,12 +123,51 @@ UNIT 01: WORKSPACE ENVIRONMENT
 
 UNIT 02: HELLO WORLD
 		02.001	Introduction
-		02.010 	Folder Organization
-		02.020	First .Rmd Notebook (02_hello-world-notebook)
-		02.030	Writing Functions
-		02.032	Task: is.odd, is.even (is.null and is.na)
-		02.034	Task:  is.positive, is.negative, is.zero
-		02.040	Functions for 'stats' module
+		02.010 	Folder Organization, First .Rmd Notebook 	(02.010_hello-world-notebook/hello-world.Rmd)
+		02.020	Writing Functions in vector form 			(02.020_vectors/standardize.Rmd)
+		02.030	Writing 'is' functions 						(02.030_is/is-odd.Rmd)							# is.odd, is.even (is.null and is.na)
+															(02.030_is/is-zero.Rmd							# is.positive, is.negative, is.zero
+		02.040	Writing functions for 'stats' module		
+															(02.040_stats/an-overview.Rmd)					# built-in functions
+															(02.040_stats/mean-variance.Rmd)				# mean and variance
+															(02.040_stats/median-MAD-sort.Rmd)				# median and MAD (sort)
+															(02.040_stats/min-max.Rmd)						# min and max (which.min vs whichMin)
+															(02.040_stats/mode.Rmd)							# mode and notMode
+															(02.040_stats/range-scale-outliers.Rmd)		 	# IQR (interquartile range), z-scores, outlier detection
+		02.050	Writing function 'stats.summary'
+		
+		02.060	Problem: 	PERSONALITY.cleanupData (cleanup PERSONALITY data)
+		02.065	Solution: 	PERSONALITY.cleanupData (cleanup PERSONALITY data)
+		
+		02.073	'color' theory (02-colors.Rmd)
+		
+		02.080	Problem:  	HANDSHAKE and HANDSHAKE.draw
+		02.085	Solution:  	HANDSHAKE and HANDSHAKE.draw
+		
+		
+UNIT 02: DISTANCE and CORRELATION
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+UNIT 02: HELLO WORLD		
+		
+		
+		(02.040_stats) ... mean, sd, mode, median [sort], mad, IQR, IXR
+																		stats.mean.vector ... stats.mean.raw
+																		min/max ... which ... stats.summary
+																		
 		02.042	Task: stats.sampleVariance [method = naive vs 2pass]
 					https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
 					
@@ -177,6 +216,8 @@ UNIT 09: EIGENRANK (NHL)
 
 
 
+
+UNIT 10:  TRADING FEATURES (5 min day trading)
 
 
 
