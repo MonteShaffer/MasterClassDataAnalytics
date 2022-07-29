@@ -130,6 +130,26 @@ UNIT 02: HELLO "R" WORLD
 				[17:12 - 22:00] GITHUB DESKTOP as alternative to Gitbash
 
 
+		02.010	"Good" coding practices
+		
+					NO SOUND
+					
+		02.020	Test Drive R with its quirks and interdependencies
+
+
+				PYTHON, JAVA, C++, Rtools
+				sin(pi) == 0, workaround
+				which.max vs whichMax ... if is not variadic
+				bin2hex, hex2bin with aliases
+				colors ... include REMOTE ... 
+
+
+		02.020	Libraries, R quirks, and functions to workaround quirks
+		
+		
+		
+		
+		
 		02.001	Introduction
 		02.010 	Folder Organization, First .Rmd Notebook 	(02.010_hello-world-notebook/hello-world.Rmd)
 		02.020	Writing Functions in vector form 			(02.020_vectors/standardize.Rmd)

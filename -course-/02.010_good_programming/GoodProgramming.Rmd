@@ -11,7 +11,7 @@ output: html_notebook
 * sometimes you will have default values for inputs
 
 * coding standards may need to be applied.  I am a WHITESMITH guy.
-* the faster I can read OLD cold, the better.
+* the faster I can read OLD code, the better.
 * the less the brain has to "translate" information, the more efficient coding becomes
 
 ## foo
@@ -149,7 +149,7 @@ Some documentation is also helpful.
 
 ```
 
-The structure of the documentation is compatible with build a library of functions (to be further discussed).
+The structure of the documentation is compatible with building a library of functions (to be further discussed).
 
 
 ```{r}
@@ -257,7 +257,7 @@ rand();
 
 ```
 
-We now have a function 'rand' function.  We can test the different parameters.
+We now have a 'rand' function.  We can test the different parameters.
 
 ## parameters
 ```{r}
@@ -275,7 +275,7 @@ Notice the last result, with a fixed seed = 10, the numbers do not change.  This
 
 ## Benchmarks
 
-So which is most efficient, first let's look at the code.  'runif' is the basic engine of randomness here (and it most places)... Uniform random ...
+So which is most efficient, first let's look at the code.  'runif' is the basic engine of randomness here (and in most places)... Uniform random ...
 
 ```{r}
 library(microbenchmark);
@@ -296,6 +296,18 @@ Maybe it is the extra white space before the function call.
 Fundamental to development is finding "reusable code" from the past and quickly implementing in the present.  COPY/PASTE is your friend
 
 NOTICE:  the "high/low" is fastest, which I should expect, so it is the DEFAULT option for the function.  The other methods may have use/purpose (educational/benchmarking), so I will leave that programming in place.
+
+```{r}
+library(microbenchmark);
+microbenchmark::microbenchmark(
+  
+         rand(1,10, n=5),      # default is high/low
+         rand(1,10, n=5, method="floor"),  # Uses the floor method
+         rand(1,10, n=5, method="sample"), # Uses the sample method (available, but why?)
+         times = 1000
+        )
+```
+
 
 My NotePad++ formatting of tabs often gets lost in RStudio.  You can open a "feature request" to get them to offer various tabbing options, but it is not likely they will consider it.  It is too hard for them to implement.  Trust me, I asked.
 
@@ -494,8 +506,10 @@ benchmarkMe = function(N=100)
   median.myfunction = median(data.myfunction);
   median.pracma = median(data.pracma);
   
+  # AS-IS, these are NOT percentages
   efficiencyB = abs(median.pracma - median.myfunction) / median.myfunction;
   efficiencyA = abs(median.pracma - median.myfunction) / median.pracma;
+  
   
   # list(N=N, A=efficiencyA, B=efficiencyB);
   c(N, efficiencyA, efficiencyB);
@@ -530,13 +544,14 @@ The 0.003 may be showing the CPU caching ... how to remove???
 
 The RAM on this computer seems to be a bottleneck, the CPU was not maxed.
 
-By changing one line of code, it is 1/100 % of an improvement over the pracma::primes function.  NOT a huge savings.  But maybe ...  The point is, now I know.
+By changing one line of code, it is 1 % of an improvement over the pracma::primes function.  NOT a huge savings.  But maybe ...  The point is, now I know.
 
 Let's randomize and run again.
 
 
 # Inverse functions
-If you create a function, you should create its inverse.
+If you create a function, you should create its inverse.  If it would exist.  
+Often, when you are converting something, you will need to create a function to convert it back.  This is good math(s) called a closed ALGEBRA.
 
 ```{r}
 #' rgb2col
@@ -546,5 +561,6 @@ If you create a function, you should create its inverse.
 ```
 
 
-
+# TODO: on your own
+Following the PRIME example, can you build an efficiency table using SIMULATIONS comparing "rand" using the default "high/low" method from the very inefficient "sample" method.  
 
