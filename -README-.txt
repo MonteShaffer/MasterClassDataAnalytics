@@ -121,7 +121,15 @@ UNIT 01: WORKSPACE ENVIRONMENT
 										</Directory>
 		
 
-UNIT 02: HELLO WORLD
+UNIT 02: HELLO "R" WORLD
+		02.001	Introduction to R, Rgui, RStudio, and first R-Notebook (.Rmd) [22:00]
+					ROYALTY-FREE SOUNDS:  https://www.bensound.com/ [scifi]
+					
+				        - 3:30]	Rgui
+				[ 3:30 - 17:12] RStudio (notebook)
+				[17:12 - 22:00] GITHUB DESKTOP as alternative to Gitbash
+
+
 		02.001	Introduction
 		02.010 	Folder Organization, First .Rmd Notebook 	(02.010_hello-world-notebook/hello-world.Rmd)
 		02.020	Writing Functions in vector form 			(02.020_vectors/standardize.Rmd)

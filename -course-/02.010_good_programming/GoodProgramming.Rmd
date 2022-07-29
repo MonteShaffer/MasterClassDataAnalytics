@@ -1,0 +1,550 @@
+---
+title: "R Notebook -'Good' Programming Practices"
+output: html_notebook
+---
+
+# Good defined
+
+* programming is an art based on how your brain works.
+* I think about things as functions with inputs and outputs
+* sometimes you won't have an output
+* sometimes you will have default values for inputs
+
+* coding standards may need to be applied.  I am a WHITESMITH guy.
+* the faster I can read OLD cold, the better.
+* the less the brain has to "translate" information, the more efficient coding becomes
+
+## foo
+
+```{r}
+foo = function(x)
+  {
+  3*x^2 - 2*x;  # by default, the last line of a function is returned.
+  }
+
+```
+
+
+```{r}
+foo(1:10);  # outputs to the console
+```
+
+```{r}
+invisible( foo(1:10) );  # executes but doesn't automatically output to the console
+```
+
+
+```{r}
+res = foo(1:10);  # notice left/right hand notation common for functions ... assigned to variable res
+```
+
+
+```{r}
+res;
+```
+
+* when scaling, efficiency still matters
+
+```{r}
+X = sample(10);  # notice "X" is not "x"
+X;
+```
+
+## sample
+"sample is horribly inefficient".  Let's think about C-programming, what is the fundamental function?
+
+```{r}
+# rand(1,2);
+
+```
+
+where is this function?  why doesn't it exist in "base R"?  That is a sign that "base R" doesn't follow many standard software-engineering protocols or practices.  ARGH!
+
+Maybe we should just write the function?
+
+### rand
+```{r}
+
+rand = function(min = -1*as.integer(Sys.time()), max = as.integer(Sys.time()), n = 1, method = "high-low", sample.replace = TRUE, seed = NULL, attributes=NULL)
+    {
+	# if(is.null(seed)) { setSeed(NULL, "rand"); my.seed = getSeed("rand"); } else { my.seed = seed; }
+    me = substr( trimMe( tolower(method) ), 1, 2);
+	n = as.integer ( n );
+	if(is.na(n) || n < 1)
+		{
+		warning( paste0('Bad value for n "', n, '" in function [rand]', "\n", "Setting n=1") );
+		n = 1;
+		}
+	res = NULL;
+    if(me == "hi")  # high-low method
+      {
+	  if(!is.null(seed)) { set.seed(seed); }
+      res = ( as.integer(( (max + 1) - min) * stats::runif(n) + min) );
+      }
+    else if(me == "fl")  # floor method
+      {
+	  if(!is.null(seed)) { set.seed(seed); }
+      res = ( as.integer( floor( stats::runif(n, min = min, max = (max + 1) ) ) ) );
+      }
+    else if(me == "sa")  # sample method
+      {
+      if(!sample.replace)
+        {
+        len = (max - min) + 1;
+        if(len < n)
+          {
+          warning( "sample.replace forced to TRUE" );
+          sample.replace = TRUE;
+          }
+        }
+	  if(!is.null(seed)) { set.seed(seed); }
+      res = ( sample(min:max, n, replace = sample.replace) );
+      }
+	else
+		{
+    stop( paste0('Unknown method "', method, '" in function [rand]') );
+		}
+		
+	if(!is.null(attributes))
+		{
+		res = setAttribute('min', min, res);
+		res = setAttribute('max', max, res);
+		res = setAttribute('seed', seed, res);
+		res = setAttribute('method', method, res);	
+		}
+	
+	res;
+    }
+```
+
+### rand documentation
+When you write a function, you should think about the use cases and program accordingly.
+Some documentation is also helpful.
+
+```{r}
+
+#' rand
+#'
+#' Generate random integers between two values (min, max).
+#'
+#' @param min By default -1*as.integer(Sys.time()), what is the minimum?  Could be negative.
+#' @param max By default as.integer(Sys.time()), what is the maximum?
+#' @param n By default 1, how many random elements do you want?
+#' @param method By default "high-low" which slightly outperforms "floor" which both outperform "sample"
+#' @param seed By default NULL, meaning we are not worried about tracking the seed here.
+#' @param sample.replace For method "sample", will allow replace = FALSE (make certain n, min/max are comformable for this)
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' rand();            # positive or negative integer
+#' rand(1);           # positive integer only
+#' rand(1, n=3);      # returns 3 positive integers
+#' rand(1,10, n=5, method="floor");  # Uses the floor method
+#' rand(1,10, n=5, method="sample"); # Uses the sample method (available, but why?)
+#' rand(1,10, n=5, method="sample", sample.replace=FALSE); # min, max, n must be comformable "with replacement = FALSE"
+#' rand(1,10, n=5, seed=10);  # fixed seed requires the min/max to be known
+
+
+```
+
+The structure of the documentation is compatible with build a library of functions (to be further discussed).
+
+
+```{r}
+rand();
+
+```
+
+
+## Support Functions
+
+### trimMe
+Notice the error.  I have another "library" function called trimMe that must be included.
+
+
+```{r}
+trimMe = function(str, side="both", method="stringi")
+  {
+  # sides = c("both", "left", "right")
+  side = tolower(side);
+  # stringr::str_trim(str);
+  # if(!is.element(side,sides)) { stop("option for 'side' must be one of:  both, left, right"); }
+  # set default to both
+
+  # dump stringr and go to stringi
+  # dump tidyverse altogether
+  # review httr and build appropriate functions
+  # use base whenever possible, then the best packages whenever possible
+  # define best by "least associated with new grammar tactics"
+  # new grammar is arbitrary and not c-based
+  # human-readable functions with variadic inputs is not new grammar
+# lsf.str("package:stringi")
+# ls("package:stringi")
+
+  if( isTRUE(requireNamespace("stringi", quietly = TRUE)) && method=="stringi" )
+    {
+    switch(side,
+          "left"  = stringi::stri_trim_left(str),
+          "right" = stringi::stri_trim_right(str),
+          "both"  = stringi::stri_trim_both(str),
+          stringi::stri_trim_both(str)
+          );
+    } else {
+            switch(side,
+                  "left"  = gsub("^\\s+", "", str),
+                  "right" = gsub("\\s+$", "", str),
+                  "both"  = gsub("^\\s+|\\s+$", "", str),
+                  gsub("^\\s+|\\s+$", "", str)
+                  );
+            }
+  }
+
+```
+
+This code relies on a library ("stringi") which is written in C (which means it is fast).  If the library and its method are not found, it uses the 'gsub' function of the base.  **NO TIDYVERSE HERE**  Not TIDY and not VERSE
+
+### setAttribute(s)
+I also need a setAttribute function
+
+```{r}
+setAttribute = function(myAttribute, myValue, myObj)
+	{
+	attributes(myObj)[[myAttribute]] = myValue;
+	myObj;  # no object referencing, so I must return
+	}
+
+#' setAttributes
+#'
+#' @param myAttributes
+#' @param myValues
+#' @param myObj
+#'
+#' @return
+#' @export
+#'
+#' @examples
+# set.attributes
+setAttributes = function(myAttributes, myValues, myObj)
+	{
+	i = 0;
+	for(myAttribute in myAttributes)
+		{
+		i = 1 + i;
+		# what if myValue is an array?
+		myValue = myValues[[i]]; # we assume they are of equal length, could error check
+		if(length(myValue) > 0)
+			{
+			if(!is.na(myValue))
+				{
+				attributes(myObj)[[myAttribute]] = myValue;
+				}
+			}
+		}
+	myObj;  # no object referencing, so I must return
+	}
+
+```
+
+This is an example where R is using some other "functional" method other than INPUT --> OUTPUT.
+
+So I have written a function that is of the form INPUT-->OUTPUT
+
+# rand()
+```{r}
+rand();
+
+```
+
+We now have a function 'rand' function.  We can test the different parameters.
+
+## parameters
+```{r}
+ rand();            # positive or negative integer
+ rand(1);           # positive integer only
+ rand(1, n=3);      # returns 3 positive integers
+ rand(1,10, n=5, method="floor");  # Uses the floor method
+ rand(1,10, n=5, method="sample"); # Uses the sample method (available, but why?)
+ rand(1,10, n=5, method="sample", sample.replace=FALSE); # min, max, n must be comformable "with replacement = FALSE"
+ rand(1,10, n=5, seed=10);  # fixed seed requires the min/max to be known
+
+```
+
+Notice the last result, with a fixed seed = 10, the numbers do not change.  This is important when you want to randomize something, share it with another person, and have the same random data used when you finish.
+
+## Benchmarks
+
+So which is most efficient, first let's look at the code.  'runif' is the basic engine of randomness here (and it most places)... Uniform random ...
+
+```{r}
+library(microbenchmark);
+microbenchmark::microbenchmark(
+         rand(),            # positive or negative integer
+         rand(1),           # positive integer only
+         rand(1, n=3),      # returns 3 positive integers
+         rand(1,10, n=5, method="floor"),  # Uses the floor method
+         rand(1,10, n=5, method="sample"), # Uses the sample method (available, but why?)
+         rand(1,10, n=5, method="sample", sample.replace=FALSE), # min, max, n must be comformable "with replacement = FALSE"
+         rand(1,10, n=5, seed=10) 
+        )
+
+```
+
+Maybe it is the extra white space before the function call.
+
+Fundamental to development is finding "reusable code" from the past and quickly implementing in the present.  COPY/PASTE is your friend
+
+NOTICE:  the "high/low" is fastest, which I should expect, so it is the DEFAULT option for the function.  The other methods may have use/purpose (educational/benchmarking), so I will leave that programming in place.
+
+My NotePad++ formatting of tabs often gets lost in RStudio.  You can open a "feature request" to get them to offer various tabbing options, but it is not likely they will consider it.  It is too hard for them to implement.  Trust me, I asked.
+
+```{r}
+# install.packages("microbenchmark", dependencies=TRUE);
+
+```
+
+You may need to install packages with required dependencies, as necessary.
+Once installed, you do not need to run this chunk again, so comment it out.
+
+If you have several RGui, RStudio open, you may get an error like above.  This shows that library installation can be a CHORE in itself, especially on a 10-year old laptop like I am using for this demo.
+
+
+# More good defined
+
+* efficiency matters ... maybe as a tradeoff between "number of tasks" and "memory being used" ... it may not matter on your laptop with your small dataset, but it could become a huge bottleneck when you try and SCALE your application
+
+## PRIME Numbers
+
+What is the use case?  I want the "primes" less than 100?  Or I want the first 100 primes?
+
+Is there a function out there that does the primary use case?
+```{r}
+#install.packages("pracma", dependencies=TRUE);
+library(pracma);
+```
+Notice the collision of the function rand.  It doesn't something simular, but not quite the same.  "pracma" is a PORTING of functions from MATLAB.  I am more closely trying to "PORT-C" if anything.  You can call a function based on its library to avoid confusion ... "pracma::rand()"
+
+### prime functions
+
+The file has a few other educational prime functions to focus on the mathematics of Archimedes' sieve (base 6) and optimality.
+
+There is one line of the pracma function that is inefficient.  In addition, it does not allow for the "first 100" primes.
+```{r}
+
+#' prime.pracmaPrimes
+#'
+#' @param n
+#' @param first
+#'
+#' @return
+#' @export
+prime.pracmaPrimes = function(n, first=FALSE)
+	{
+	# this duplicates the primary logic of pracma::primes
+	# by computing 'sqrt' one time, it speeds up things 'slightly'
+	# it allows for firstN or fromN with first=FLAG
+	gn = n;
+	if(first) { gn = ceiling( n * log(n) + n * log(log(n)) ); }
+	gn.sqrt = floor( sqrt(gn) );  # needs to round down so the "seq by k" doesn't break ...
+
+	p = seq(1, gn, by = 2); # odd numbers
+    q = length(p);
+    p[1] = 2; 	# replace 1 with 2 (prime)
+				# 9 is the first non-prime?
+	if(gn >= 9)
+		{
+		for (k in seq(3, gn.sqrt, by = 2) )
+			{
+			k.idx = (k + 1)/2;
+			if (p[k.idx] != 0)
+				{
+				# using a squared rule on indexes ?
+				k2.idx = (k * k + 1)/2;
+
+				# cat("\n", " k = ", k, "... (k+1/2) = ", k.idx, "... (k * k + 1)/2 = ", k2.idx, "\n");
+
+				p[ seq(k2.idx, q, by = k) ] = 0;
+				}
+			}
+		}
+
+	p = p[p > 0];
+
+	if(first)
+		{
+		p[1:n];
+		} else {
+				p[p < n];
+				}
+	}
+```
+
+### Examples
+
+```{r}
+
+ pracma::primes(100);
+
+```
+
+```{r}
+
+ prime.pracmaPrimes(100);
+
+```
+
+```{r}
+
+ prime.pracmaPrimes(100, first=TRUE);
+
+```
+
+
+### PRIME efficiencies
+```{r}
+library(microbenchmark);
+mb.res = microbenchmark::microbenchmark(
+                                        pracma::primes(100) , 
+                                        prime.pracmaPrimes(100),
+                                        times = 100
+                                        );
+mb.res;
+
+# 
+                                      #  prime.pracmaPrimes(100, first=TRUE),
+```
+
+#### subset
+```{r}
+mb.res$which = as.numeric(mb.res$expr);
+data.pracma = subset(mb.res, which==1)$time;  # factors can't "==" on number
+data.myfunction = subset(mb.res, which==2)$time;
+```
+
+
+#### percentages
+```{r}
+efficiency = abs(median.pracma - median.myfunction) / median.myfunction;
+round(efficiency * 100, 2);
+
+```
+
+
+```{r}
+efficiency = abs(median.pracma - median.myfunction) / median.pracma;
+round(efficiency * 100, 2);
+```
+
+#### plot
+```{r}
+myMax = max(c(data.pracma, data.myfunction));
+
+  median.myfunction = median(data.myfunction);
+median.myfunction;
+
+  median.pracma = median(data.pracma);
+median.pracma;
+
+# making plots square inside RStudio, good luck... 
+# don't distort your data ... 
+
+par(pty="s");
+plot(data.pracma, data.myfunction,
+     xlim = c(0, myMax),
+     ylim = c(0, myMax),
+     asp=1
+     );
+
+abline(0,1);
+abline(h = median.myfunction);
+abline(v = median.pracma);
+
+# I have an "issue" with the default 'median' function, but for another time
+```
+
+
+
+DIMENISHING RETURNS... in this example ... the efficiency improves as the CPU processes more of these (according to microbenchmark)
+
+... I don't think so... 
+
+# SIMULATION
+
+You could wrap these code into a function, and pass a "times" parameter to build a table ... A simulation of times .... 
+
+```{r}
+library(microbenchmark);
+
+benchmarkMe = function(N=100)
+  {
+  howMany = rand(50,100);
+    # could I switch up the order?
+  mb.res = microbenchmark::microbenchmark(
+                                          pracma::primes(howMany) , 
+                                          prime.pracmaPrimes(howMany),
+                                          times = N
+                                          );
+  mb.res$which = as.numeric(mb.res$expr);
+  data.pracma = subset(mb.res, which==1)$time;  # factors can't "==" on number
+  data.myfunction = subset(mb.res, which==2)$time;
+  
+  myMax = max(c(data.pracma, data.myfunction));
+
+  median.myfunction = median(data.myfunction);
+  median.pracma = median(data.pracma);
+  
+  efficiencyB = abs(median.pracma - median.myfunction) / median.myfunction;
+  efficiencyA = abs(median.pracma - median.myfunction) / median.pracma;
+  
+  # list(N=N, A=efficiencyA, B=efficiencyB);
+  c(N, efficiencyA, efficiencyB);
+  }
+
+```
+
+## Execute
+
+```{r}
+
+Ns = 10^(1:4);
+
+res = NULL; # I don't know how big ... or do I?
+
+for(N in Ns)
+  {
+  print(N);
+  row = benchmarkMe(N);
+  res = rbind(res, row);
+  }
+
+res = data.frame(res);
+rownames(res) = Ns;
+colnames(res) = c("N", "efficiencyA", "efficiencyB");
+res;
+```
+
+It seemed too fast ... so ... I don't believe we are "clearing" CPU caching between either.... 
+
+The 0.003 may be showing the CPU caching ... how to remove???
+
+The RAM on this computer seems to be a bottleneck, the CPU was not maxed.
+
+By changing one line of code, it is 1/100 % of an improvement over the pracma::primes function.  NOT a huge savings.  But maybe ...  The point is, now I know.
+
+Let's randomize and run again.
+
+
+# Inverse functions
+If you create a function, you should create its inverse.
+
+```{r}
+#' rgb2col
+#'
+#' Reverse the built-in grDevices::col2rgb function
+#' [ See grDevices::convertColor or grDevices::make.rgb ]
+```
+
+
+
+
