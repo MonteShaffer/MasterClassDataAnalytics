@@ -1,0 +1,495 @@
+---
+title: 'R Notebook example: Hello World'
+name: PUT --YOUR NAME-- HERE
+email: PUT --YOUR EMAIL-- HERE
+output:
+  pdf_document: default
+  html_document: default
+---
+
+# What is a library?
+
+## Number of Cores
+```{r}
+# Cntrl-Alt-I is your friend
+
+library(parallel);          # install.packages("parallel", dependencies=TRUE);
+parallel::detectCores();
+
+# Cntrl-Shift-C is also your friend
+
+```
+Can you find another library that counts cores?  Is it a core or a thread?  My laptop is a QUAD-core.
+
+## Prime Numbers
+
+```{r}
+library(pracma);
+pracma::primes(22);
+```
+
+
+```{r}
+prime.pracmaPrimes = function(n, first=FALSE)
+	{
+	# this duplicates the primary logic of pracma::primes
+	# by computing 'sqrt' one time, it speeds up things 'slightly'
+	# it allows for firstN or fromN with first=FLAG
+	gn = n;
+	if(first) { gn = ceiling( n * log(n) + n * log(log(n)) ); }
+	gn.sqrt = floor( sqrt(gn) );  # needs to round down so the "seq by k" doesn't break ...
+
+	p = seq(1, gn, by = 2); # odd numbers
+    q = length(p);
+    p[1] = 2; 	# replace 1 with 2 (prime)
+				# 9 is the first non-prime?
+	if(gn >= 9)
+		{
+		for (k in seq(3, gn.sqrt, by = 2) )
+			{
+			k.idx = (k + 1)/2;
+			if (p[k.idx] != 0)
+				{
+				# using a squared rule on indexes ?
+				k2.idx = (k * k + 1)/2;
+
+				# cat("\n", " k = ", k, "... (k+1/2) = ", k.idx, "... (k * k + 1)/2 = ", k2.idx, "\n");
+
+				p[ seq(k2.idx, q, by = k) ] = 0;
+				}
+			}
+		}
+
+	p = p[p > 0];
+
+	if(first)
+		{
+		p[1:n];
+		} else {
+				p[p < n];
+				}
+	}
+```
+
+
+```{r}
+prime.pracmaPrimes(22);
+```
+
+```{r}
+prime.pracmaPrimes(22, first=TRUE);
+```
+
+### Benchmarking
+```{r}
+library(microbenchmark);
+microbenchmark::microbenchmark(
+                                pracma::primes(22) , 
+                                prime.pracmaPrimes(22), 
+                                prime.pracmaPrimes(22, first=TRUE) 
+                                );
+```
+One line of code is inefficient in 'pracma', can you find it?
+
+```{r}
+pracma::primes
+```
+The 'sqrt(n)' is not changing but is being computed several times in the 'k' sequence.
+
+# Does 'hello world' work?
+
+```{r}
+hello = function()
+  {
+  print("Hello, world!")
+  }
+hello();
+```
+
+```{r}
+source("https://raw.githubusercontent.com/MonteShaffer/MasterClassDataAnalytics/main/functions/functions-hello.R");
+hello();
+```
+
+# Does Python Work?
+
+```{r}
+library(reticulate);        # install.packages("reticulate", dependencies=TRUE);
+reticulate::use_python("C:/Python/Python39")
+```
+
+Pay attention to detail.  This will only work if all the building blocks are in place.
+```{python}
+print("hello world");
+```
+
+```{python}
+def pownum(base, pow):
+  return base ** pow
+
+print(pownum(9,5));
+```
+
+```{python}
+print(pownum(3,5));
+```
+
+
+# Does C++ Work?
+
+```{r}
+library(Rcpp);        # install.packages("Rcpp", dependencies=TRUE);
+# https://stackoverflow.com/questions/64839024/
+```
+
+
+## Bits and Such
+```{r}
+Rcpp::cppFunction("long long RShift(long long a, int b) { return a >> b;}")
+```
+
+### Shifty shifting
+
+The "right shift" operator in R is based on S+ and has some limitations when it comes to signed (negative) integers.
+
+```{r}
+y = 1732584194;
+RShift(y, 16);
+bitwShiftR(y, 16);
+```
+
+
+```{r}
+y = -1732584194;
+RShift(y, 16);
+bitwShiftR(y, 16);
+```
+
+Libraries 'bit' and 'bit64' may be of some benefit, but beforewarned when working with bits using R.
+
+```{r}
+bitShiftR = function(x, bits, unsigned=FALSE)
+  {
+  if(!is.negative(x) | unsigned) { return( bitwShiftR(x,bits) ); }
+  -bitwShiftR(-x,bits) - 1; #  - 1;                  # >>>
+  }
+
+is.negative = function(x, ..., tol = sqrt(.Machine$double.eps), part="Re")
+  {
+  more = unlist(list(...)); x = c(x, more);
+  x = if(part == "Im") { x = Im(x); } else { x = Re(x); }
+  x < ( -1 * tol );
+  }
+
+y = -1732584194;
+RShift(y, 16);
+bitwShiftR(y, 16);
+bitShiftR(y, 16);
+
+```
+### Equality
+```{r}
+step = 0.75;
+step;
+```
+```{r}
+options(digits=22);
+step == 0.75;
+```
+
+```{r}
+pi;
+sin(pi);
+sin(pi) == 0;
+# isClose(a,b);
+```
+
+
+
+### Convert decimal number to a binary string (and vice versa)
+
+#### decbin function
+```{r}
+# https://stackoverflow.com/questions/6614283/converting-decimal-to-binary-in-r
+
+dec2bin = decbin = function(decnum) 
+	{
+	bvect = rep(0, 1 + floor(log(decnum, 2))); # pre-populate with zeroes
+	while (decnum >= 2) 
+		{
+		power = floor(log(decnum, 2));
+		bvect[1 + power] = 1;
+		decnum = decnum - 2^power;
+		} 
+	bvect[1] = decnum %% 2;
+	paste(rev(bvect), collapse = ""); # convert to a string, reversed
+	}
+```
+
+
+#### decbin example
+```{r}
+decbin(57);
+```
+If you write a function, you should also have its inverse.
+
+#### bindec function
+```{r}
+# two names for the function
+  # bin2dec is matlab
+  # bindec is PHP 
+bin2dec = bindec = function(binstr)
+  {
+  n = strlen(binstr);
+	res = 0; power = 0;
+	for(i in n:1) # we reversed it in the for loop
+		{
+		bit = as.integer(charAt(binstr,i));
+		add = 0;
+		if(bit == 1) { add = 2^power; }
+		
+		res = res + add;
+		power = 1 + power;
+		}
+	res;
+  }
+
+```
+
+```{r}
+## bin2dec('111001');  # you may want to comment this out when you Knit-HTML as it may throw an "intentional" error.
+```
+
+#### helper functions
+```{r}
+strlen = function(str)
+  {
+  # history :: # https://en.cppreference.com/w/c/string/byte/strlen
+  # http://www.cplusplus.com/reference/cstring/
+  # https://en.wikipedia.org/wiki/C99
+  # https://www.programiz.com/c-programming/library-function/string.h/strlen
+  # vectorized ... already
+  nchar( as.character(str), type="chars");
+  }
+
+charAt = function(str,idx)
+  {
+  substr(str,idx,idx);
+  }
+
+```
+
+#### bindec example
+
+```{r}
+bin2dec('111001');
+```
+
+```{r}
+bindec('111001');
+```
+
+
+
+#### INVERSE check
+```{r}
+bindec( decbin(57) );
+
+```
+
+```{r}
+decbin( bindec('111001') );
+```
+```{r}
+typeof( 57 );
+```
+
+
+```{r}
+typeof( decbin(57) );
+```
+
+#### String PAD zeroes
+You could left-side 'strPadLeft' with zeroes if you wanted it to be a certain bit length
+
+```{r}
+strPadLeft = function(str, final.str.len, padding="0", method="stringi")
+  {
+  if( isTRUE(requireNamespace("stringi", quietly = TRUE)) && method=="stringi" )
+    {
+    stringi::stri_pad_left(str, final.str.len, pad = padding);
+    } else {
+            n = strlen(str);
+            r = final.str.len - n;
+            if(r < 0) { stop("strPadLeft is too short!"); }
+            paste0(paste(rep(padding,r),collapse=""),str);
+
+            }
+  }
+```
+
+
+
+```{r}
+strPadLeft( decbin(57), 8);
+```
+
+
+```{r}
+strPadLeft( decbin(57), 8, method="base");
+```
+
+```{r}
+strPadLeft( decbin(57), 8, method="Adljblkjadlk");
+```
+
+#### Benchmarking speed
+
+```{r}
+library(microbenchmark);
+microbenchmark::microbenchmark(
+                                strPadLeft( decbin(57), 8) , 
+                                strPadLeft( decbin(57), 8, method="base"), 
+                                strPadLeft( decbin(57), 8, method="Adljblkjadlk")
+                                );
+```
+
+We are also benchmarking the 'decbin' function which likely can also be improved upon.  It is a good idea to isolate what you are actually timing, but testing in context is not a bad idea.
+
+Since the library 'stringi' is written in C++, it has some native efficiencies over the R interpreted 'base' solution. [https://cran.r-project.org/web/packages/stringi/index.html]
+
+## Matrices with External C++ file
+
+This will source and compile the code.  Maybe give it a minute.
+```{r}
+Rcpp::sourceCpp("multiply.cpp");
+```
+
+```{r}
+A = matrix(rnorm(10000), 100, 100); # fully populated, 100 x 100, relatively small
+B = matrix(rnorm(10000), 100, 100);
+
+# base::matrix
+```
+
+```{r}
+library(microbenchmark);
+microbenchmark::microbenchmark(
+                                eigenMatTrans(A),
+                                A%*%B, 
+                                armaMatMult(A, B), 
+                                eigenMatMult(A, B), 
+                                eigenMapMatMult(A, B)
+                                );
+
+```
+It appears 'eigen' performs well for me; 'arma' is about equivalent to the built-in R multiplication.
+
+Can we use sparse matrices and pass them into C++?  Can we pass an 'R' sparse matrix into a C++ function call for speed purposes?  
+
+## Imagery
+
+Two powerful C/C++ tools now accessible within R.
+```{r}
+library(magick); #install.packages("magick", dependencies=TRUE);
+# https://cran.r-project.org/web/packages/magick/vignettes/intro.html#The_grid_package
+# https://www.datanovia.com/en/blog/easy-image-processing-in-r-using-the-magick-package/
+# https://www.imagemagick.org/discourse-server/viewtopic.php?t=18433
+
+# 
+image_content = function(x, ...)
+  {
+  x = magick::image_data(x, ...);
+  as.integer(x);
+  }
+
+tiger         = magick::image_read_svg('http://jeroen.github.io/images/tiger.svg', width = 350);
+
+tiger;
+```
+
+```{r}
+tiger.png     = magick::image_convert(tiger, "png");
+tiger.png; 
+```
+
+
+```{r}
+tiger.matrix  = image_content(tiger.png);
+dim(tiger.matrix);
+# 3D array
+# tiger.matrix[,,1];  # x,y, z ... z is likely RGBa = 4 layers
+
+# tiger.matrix;
+```
+
+```{r}
+library(tesseract); # install.packages("tesseract");
+# https://github.com/ropensci/magick/issues/154
+
+img.file = "iris-ocr-intro.png";
+img = magick::image_read( img.file );
+#img.txt = tesseract::image_ocr(img);  # renamed during LIBRARY upgrade?
+img.txt = tesseract::ocr(img);
+
+cat(img.txt);
+```
+
+
+```{r}
+img.file = "iris-ocr.png";
+
+img = magick::image_read( img.file );
+# img.txt = tesseract::image_ocr(img);  # renamed during LIBRARY upgrade?
+img.txt = tesseract::ocr(img);
+
+cat(img.txt);
+```
+
+
+# Does Java Work?
+
+Natural language processing requires java running under the hood.
+
+
+```{r}
+library(openNLP);  # this requires rJava ... Java
+library(NLP);
+
+sentence.a = openNLP::Maxent_Sent_Token_Annotator();
+word.a     = openNLP::Maxent_Word_Token_Annotator();
+```
+
+
+```{r}
+s = anna = "Happy families are all alike; every unhappy family is unhappy in its own way.";
+
+sw.a       = NLP::annotate(s, list(sentence.a, word.a));
+
+pos.a      = openNLP::Maxent_POS_Tag_Annotator(probs=TRUE);
+swpos.a    = NLP::annotate(s, list(pos.a), sw.a);
+```
+
+```{r}
+swpos.a.words = subset(swpos.a, type=="word");
+
+(swpos.a.words);  
+```
+
+```{r}
+# use substring to map back to the original value
+substring(s, swpos.a.words$start, swpos.a.words$end);
+# NOT a dataframe, so will have to further manipulate
+```
+
+
+
+```{r}
+# seldom will I use an "apply" macro.
+tags = sapply(swpos.a.words$features, `[[`, "POS");
+sort(table(tags),decreasing = TRUE);
+```
+
+
+
+

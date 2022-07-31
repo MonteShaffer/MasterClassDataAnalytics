@@ -1,0 +1,203 @@
+---
+title: "R Notebook - benchmark efficiencies"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Necessary Functions
+```{r}
+
+doMedian = function(x, type=1)
+  {
+  xx = stats::na.omit(x);
+  as.numeric(stats::quantile(xx, prob=c(0.5), type=type));
+  }
+
+
+strPadLeft = function(str, final.str.len, padding="0", method="stringi")
+  {
+  if( isTRUE(requireNamespace("stringi", quietly = TRUE)) && method=="stringi" )
+    {
+    stringi::stri_pad_left(str, final.str.len, pad = padding);
+    } else {
+            n = strlen(str);
+            r = final.str.len - n;
+            if(r < 0) { stop("strPadLeft is too short!"); }
+            paste0(paste(rep(padding,r),collapse=""),str);
+
+            }
+  }
+
+strlen = function(str)
+  {
+  # history :: # https://en.cppreference.com/w/c/string/byte/strlen
+  # http://www.cplusplus.com/reference/cstring/
+  # https://en.wikipedia.org/wiki/C99
+  # https://www.programiz.com/c-programming/library-function/string.h/strlen
+  # vectorized ... already
+  nchar( as.character(str), type="chars");
+  }
+
+charAt = function(str,idx)
+  {
+  substr(str,idx,idx);
+  }
+
+bin2dec = bindec = function(binstr)
+  {
+  n = strlen(binstr);
+	res = 0; power = 0;
+	for(i in n:1) # we reversed it in the for loop
+		{
+		bit = as.integer(charAt(binstr,i));
+		add = 0;
+		if(bit == 1) { add = 2^power; }
+		
+		res = res + add;
+		power = 1 + power;
+		}
+	res;
+  }
+
+
+dec2bin = decbin = function(decnum) 
+	{
+	bvect = rep(0, 1 + floor(log(decnum, 2))); # pre-populate with zeroes
+	while (decnum >= 2) 
+		{
+		power = floor(log(decnum, 2));
+		bvect[1 + power] = 1;
+		decnum = decnum - 2^power;
+		} 
+	bvect[1] = decnum %% 2;
+	paste(rev(bvect), collapse = ""); # convert to a string, reversed
+	}
+```
+
+# Benchmark Object 'mb.res'
+```{r}
+library(microbenchmark);
+mb.res = microbenchmark::microbenchmark(
+                                        strPadLeft( decbin(57), 8) , 
+                                        strPadLeft( decbin(57), 8, method="base"), 
+                                        strPadLeft( decbin(57), 8, method="Adljblkjadlk"),
+                                        times=100,
+                                        control=list("order"="random","warmup"=2)
+                                        );
+mb.res;
+```
+# SANDBOX
+```{r}
+mb.res$which = as.numeric(mb.res$expr);
+
+ids = unique(as.numeric(mb.res$expr));
+names = unique(as.character(mb.res$expr));
+
+
+out = NULL;
+
+A.order = which(ids == 1); # this is the order of A
+print(A.order);
+A.name = names[A.order];
+
+A = subset(mb.res, which==A.order)$time;
+A.median = doMedian(A)/1000; #microseconds
+
+row = c(1,A.order,A.name,A.median,0);
+out = rbind(out, row);
+
+n.ids = length(ids);
+
+if(n.ids > 1)
+{
+  for(i in 2:n.ids)
+  {
+    B.order = which(ids == i); # this is the order of B
+    print(B.order);
+B.name = names[B.order];
+
+B = subset(mb.res, which==B.order)$time;
+B.median = doMedian(B)/1000; #microseconds
+
+B.eff = round(100* (A.median-B.median)/A.median , 2);
+
+row = c(i,B.order,B.name,B.median,B.eff);
+out = rbind(out, row);
+  }
+  
+  
+
+
+
+}
+
+out = data.frame(out);
+colnames(out)=c("Index","Order","Name","Median","Delta.Efficiency");
+# rownames(out)=out$Name;
+
+out;
+```
+
+# FUNCTION
+```{r}
+
+
+benchmark.efficiency = function(mb.res)
+	{
+	mb.res$which = as.numeric(mb.res$expr);
+
+	mb.ids = unique(as.numeric(mb.res$expr));
+	mb.names = unique(as.character(mb.res$expr));
+
+	out = NULL;
+
+	A.order 	= which(mb.ids == 1); # this is the order of A
+	A.name 		= mb.names[A.order];
+	A 			= subset(mb.res, which==A.order)$time;
+	A.median 	= doMedian(A)/1000; #microseconds
+
+	row = c(1,A.order,A.name,A.median,0); # BENCHMARK, delta efficiency is 0
+	out = rbind(out, row);
+
+	n.ids = length(mb.ids);
+	if(n.ids > 1)
+		{
+		for(i in 2:n.ids)
+			{
+			B.order 	= which(mb.ids == i); # this is the order of B
+			B.name 		= mb.names[B.order];
+			B 			= subset(mb.res, which==B.order)$time;
+			B.median 	= doMedian(B)/1000; #microseconds
+			B.eff 		= round(100* (A.median-B.median)/A.median , 2);
+
+			row = c(i,B.order,B.name,B.median,B.eff);
+			out = rbind(out, row);
+			}
+		}
+
+	out = data.frame(out);
+	colnames(out)=c("Index","Order","Name","Median","Delta.Efficiency");
+	# rownames(out)=out$Name;
+	rownames(out) = NULL;
+		out$Median = as.numeric(out$Median);
+		out$Delta.Efficiency = as.numeric(out$Delta.Efficiency);
+		out$Ranking = order(out$Delta.Efficiency, decreasing=TRUE); # not to be confused with 'rank'
+
+	out;
+	}
+	
+	
+	
+
+```
+
+# EXAMPLE
+```{r}
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+```
+
+
+
+

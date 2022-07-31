@@ -262,8 +262,11 @@ We now have a 'rand' function.  We can test the different parameters.
 ## parameters
 ```{r}
  rand();            # positive or negative integer
+ rand(0);           # non-negative integer only
  rand(1);           # positive integer only
  rand(1, n=3);      # returns 3 positive integers
+ rand(1,10, n=5);  # Uses the DEFAULT (high/low) method
+ rand(1,10, n=5, method="aljblkj");  # Uses the ??? method
  rand(1,10, n=5, method="floor");  # Uses the floor method
  rand(1,10, n=5, method="sample"); # Uses the sample method (available, but why?)
  rand(1,10, n=5, method="sample", sample.replace=FALSE); # min, max, n must be comformable "with replacement = FALSE"
