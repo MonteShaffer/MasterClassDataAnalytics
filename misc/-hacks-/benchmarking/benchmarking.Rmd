@@ -6,7 +6,15 @@ output:
 ---
 
 # Necessary Functions
+
+CNTRL-ALT-R (run everything) 
 ```{r}
+
+setAttribute = function(myAttribute, myValue, myObj)
+	{
+	attributes(myObj)[[myAttribute]] = myValue;
+	myObj;  # no object referencing, so I must return
+	}
 
 doMedian = function(x, type=1)
   {
@@ -192,11 +200,992 @@ benchmark.efficiency = function(mb.res)
 
 ```
 
+# FUNCTION updated
+```{r}
+
+
+benchmark.efficiency = function(mb.res)
+	{
+	mb.names = levels(mb.res$expr);
+	
+	out = NULL;
+
+	A.name 		= mb.names[1];
+	A 			= subset(mb.res, expr==A.name)$time;
+	A.median 	= doMedian(A);
+
+	row = c(1,A.name,A.median,0); # BENCHMARK, delta efficiency is 0
+	out = rbind(out, row);
+
+	n.names = length(mb.names);
+	if(n.names > 1)
+		{
+		for(i in 2:n.names)
+			{
+			B.name 		= mb.names[i];
+			B 			= subset(mb.res, expr==B.name)$time;
+			B.median 	= doMedian(B);
+	
+			B.eff 		= round(100* (A.median-B.median)/A.median , 2);
+
+			row = c(i,B.name,B.median,B.eff);
+			out = rbind(out, row);
+			}
+		}
+
+	out = data.frame(out);
+	colnames(out)=c("Index","Name","Median","Delta.Efficiency");
+	# rownames(out)=out$Name;
+	rownames(out) = NULL;
+		out$Median = as.numeric(out$Median);
+		out$Delta.Efficiency = as.numeric(out$Delta.Efficiency);
+		#out$Ranking = order(out$Delta.Efficiency, decreasing=TRUE); # not to be confused with 'rank'
+		out$Rank = rank(out$Median, ties="first");
+	
+	out = setAttribute("microbenchmark.unit",.Options$microbenchmark.unit,out);
+		
+	out;
+	}
+	
+	
+	
+```
+
+
 # EXAMPLE
 ```{r}
 mb.eff = benchmark.efficiency(mb.res);
 mb.eff;
 ```
+
+
+
+# trimMe
+
+## My wrapper function
+
+```{r}
+
+
+
+trimMe = function(str, side="both", method="stringi")
+  {
+  # sides = c("both", "left", "right")
+  # methods = c("cpp", "stringi", "base")
+  side = tolower(side);
+  ###m = substr(tolower(method),1,1);  # is this slowing me down?
+  # stringr::str_trim(str);
+  # if(!is.element(side,sides)) { stop("option for 'side' must be one of:  both, left, right"); }
+  # set default to both
+
+  # dump stringr and go to stringi
+  # dump tidyverse altogether
+  # review httr and build appropriate functions
+  # use base whenever possible, then the best packages whenever possible
+  # define best by "least associated with new grammar tactics"
+  # new grammar is arbitrary and not c-based
+  # human-readable functions with variadic inputs is not new grammar
+# lsf.str("package:stringi")
+# ls("package:stringi")
+
+	if(method == "cpp" && exists("cpp_trim"))
+			{
+			res = switch(side,
+							  "left"  = cpp_ltrim(str),
+							  "right" = cpp_rtrim(str),
+							  "both"  = cpp_trim(str),
+					cpp_trim(str)
+					);
+			return (res);
+			}
+		
+		
+  if( method == "stringi" && isTRUE(requireNamespace("stringi", quietly = TRUE)) )
+    {
+    res = switch(side,
+						  "left"  = stringi::stri_trim_left(str),
+						  "right" = stringi::stri_trim_right(str),
+						  "both"  = stringi::stri_trim_both(str),
+				stringi::stri_trim_both(str)
+				);
+	return (res);
+	}
+	
+	
+		
+    res = switch(side,
+						  "left"  = gsub("^\\s+", "", str),
+						  "right" = gsub("\\s+$", "", str),
+						  "both"  = gsub("^\\s+|\\s+$", "", str),
+                  gsub("^\\s+|\\s+$", "", str)
+                  );
+    return (res);
+  }
+
+
+```
+
+
+## C++
+```{r}
+
+# C:\\_git_\\github\\MonteShaffer\\humanVerse\\cpp
+
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\str.R.cpp");
+
+### Rcpp::sourceCpp("https://raw.githubusercontent.com/MonteShaffer/humanVerse/main/humanVerse/src/cpp/str.cpp"); # DOESN"T WORK
+
+cpp_trim(" monte \t\n");
+
+```
+
+## MB
+```{r}
+# http://adv-r.had.co.nz/Rcpp.html
+# https://stackoverflow.com/questions/216823/how-to-trim-a-stdstring
+# https://teuder.github.io/rcpp4everyone_en/180_date.html#operators-date
+# https://gallery.rcpp.org/articles/a-first-boost-example/
+
+str = " jdfldasj djslkfj     ";
+# The available units are nanoseconds ("ns"), microseconds ("us"), milliseconds ("ms"), seconds ("s") and evaluations per seconds ("eps") and relative runtime compared to the best median time ("relative").
+#.Options$microbenchmark.unit = "eps";
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        cpp_trim(str), # c++
+                                        trimMe(str, method="cpp"),
+                                        
+                                        
+                                        stringi::stri_trim_both(str), 
+                                        trimMe(str, method="stringi"),
+                                        stringr::str_trim(str, side="both"),
+                                        
+                                        trimMe(str, method="base"),
+                                        
+                                        times=10000,
+                                        control=list("order"="random","warmup"=100)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+```
+
+### boxplot
+```{r}
+boxplot(mb.res, horizontal=TRUE);
+```
+
+### efficiency
+```{r}
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+```
+
+## functional efficiency
+
+```{r}
+
+
+
+trimMe = function(str, side="both", method="stringi")
+  {
+  # sides = c("both", "left", "right")
+  # methods = c("cpp", "stringi", "base")
+  side = tolower(side);
+  ###m = substr(tolower(method),1,1);  # is this slowing me down?
+  # stringr::str_trim(str);
+  # if(!is.element(side,sides)) { stop("option for 'side' must be one of:  both, left, right"); }
+  # set default to both
+
+  # dump stringr and go to stringi
+  # dump tidyverse altogether
+  # review httr and build appropriate functions
+  # use base whenever possible, then the best packages whenever possible
+  # define best by "least associated with new grammar tactics"
+  # new grammar is arbitrary and not c-based
+  # human-readable functions with variadic inputs is not new grammar
+# lsf.str("package:stringi")
+# ls("package:stringi")
+
+	if(method == "cpp" && exists("cpp_trim"))
+			{
+			res = switch(side,
+							  "left"  = cpp_ltrim(str),
+							  "right" = cpp_rtrim(str),
+							  "both"  = cpp_trim(str),
+					cpp_trim(str)
+					);
+			return (res);
+			}
+		
+		
+  if( method == "stringi" && isTRUE(requireNamespace("stringi", quietly = TRUE)) )
+    {
+    res = switch(side,
+						  "left"  = stringi::stri_trim_left(str),
+						  "right" = stringi::stri_trim_right(str),
+						  "both"  = stringi::stri_trim_both(str),
+				stringi::stri_trim_both(str)
+				);
+	return (res);
+	}
+	
+	
+		
+    res = switch(side,
+						  "left"  = gsub("^\\s+", "", str),
+						  "right" = gsub("\\s+$", "", str),
+						  "both"  = gsub("^\\s+|\\s+$", "", str),
+                  gsub("^\\s+|\\s+$", "", str)
+                  );
+    return (res);
+  }
+
+
+```
+
+### Test 1: 'tolower' and 'substr'
+
+```{r}
+str = "\t Albjlkje \n\t";
+side = "BoTh";
+method = "stRINGi";
+
+
+f1.s = function(side) { tolower(side); }
+f1.m = function(method) { tolower(method); }
+f2.s = function(side) { substr(tolower(side),1,1); }
+f2.m = function(method) { substr(tolower(method),1,1); }
+
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        f1.s(side),
+                                        f1.m(method),
+                                        f2.s(side),
+                                        f2.m(method),
+                                        
+                                        times=10000,
+                                        control=list("order"="random","warmup"=100)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+
+```
+
+
+### Test 2:  'if' (order and nesting)
+```{r}
+if1 = function(method) { method=="cpp"; }
+if2 = function(m) { m=="c"; }
+if3t = function(method) { ( method == "cpp" && exists("cpp_trim") ); }
+if3tn = function(method) 
+          { 
+          if( method == "cpp") 
+            { 
+            if( exists("cpp_trim") ) 
+              { 
+              return(TRUE); 
+              } 
+            } 
+          return(FALSE); 
+          }
+if3tr = function(method) { ( exists("cpp_trim") && method=="cpp" ); }
+if3trn = function(method) 
+          { 
+          if( exists("cpp_trim") ) 
+            { 
+            if( method == "cpp" ) 
+              { 
+              return(TRUE); 
+              } 
+            } 
+        return(FALSE); 
+        }
+if3f = function(method) { ( method == "cpp" && exists("cpp_trimDFDS") ); }
+if3fr = function(method) { ( exists("cpp_trimDFDS") && method=="cpp" ); }
+
+
+
+str = "\t Albjlkje \n\t";
+side = "both";
+method = "stringi";
+s = substr(tolower(side),1,1);
+m = substr(tolower(method),1,1);
+
+
+
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        if1(method),
+                                        if2(method),
+                                        if3t(method),
+                                        if3f(method),
+                                        if3tr(method),
+                                        if3fr(method),
+                                        if3trn(method),
+                                        
+                                        times=10000,
+                                        control=list("order"="random","warmup"=100)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+
+```
+
+### Test 3: 'switch'
+```{r}
+
+s1 = function(str,side)
+      {
+      res = switch(side,
+      						  "left"  = gsub("^\\s+", "", str),
+      						  "right" = gsub("\\s+$", "", str),
+      						  "both"  = gsub("^\\s+|\\s+$", "", str),
+                        gsub("^\\s+|\\s+$", "", str)
+                        );
+      return (res);
+      }
+
+s1.d = function(str,side)
+      {
+      res = switch(side,
+      						  "left"  = gsub("^\\s+", "", str),
+      						  "right" = gsub("\\s+$", "", str),
+                        gsub("^\\s+|\\s+$", "", str)
+                        );
+      return (res);
+      }
+
+s1.if = function(str,side)
+    {
+    if(side == "left") 
+      {
+      return( gsub("^\\s+", "", str) );
+      }
+    if(side == "right") 
+      {
+      return( gsub("\\s+$", "", str) );
+      }
+    return( gsub("^\\s+|\\s+$", "", str) );
+    }
+
+s2= function(str,s)
+      {
+      res = switch(s,
+      						  "l"  = gsub("^\\s+", "", str),
+      						  "r" = gsub("\\s+$", "", str),
+      						  "b"  = gsub("^\\s+|\\s+$", "", str),
+                        gsub("^\\s+|\\s+$", "", str)
+                        );
+      return (res);
+      }
+
+
+s2.d= function(str,s)
+      {
+      res = switch(s,
+      						  "l"  = gsub("^\\s+", "", str),
+      						  "r" = gsub("\\s+$", "", str),
+                        gsub("^\\s+|\\s+$", "", str)
+                        );
+      return (res);
+      }
+
+s2.if = function(str,s)
+    {
+    if(s == "left") 
+      {
+      return( gsub("^\\s+", "", str) );
+      }
+    if(s == "right") 
+      {
+      return( gsub("\\s+$", "", str) );
+      }
+    return( gsub("^\\s+|\\s+$", "", str) );
+    }
+
+str = "\t Albjlkje \n\t";
+side = "both";
+method = "stringi";
+s = substr(tolower(side),1,1);
+m = substr(tolower(method),1,1);
+
+
+
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        s1(str,side),
+                                        s1.d(str,side),
+                                        s1.if(str,side),
+                                        s2(str,s),
+                                        s2.d(str,s),
+                                        s2.if(str,s),
+                                        
+                                        times=10000,
+                                        control=list("order"="random","warmup"=100)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+```
+
+
+
+```{r}
+trimMe = function(str, side="both", method="stringi")
+  {
+  # sides = c("both", "left", "right")
+  # methods = c("cpp", "stringi", "base")
+  side = tolower(side);
+  ###m = substr(tolower(method),1,1);  # is this slowing me down?
+  # stringr::str_trim(str);
+  # if(!is.element(side,sides)) { stop("option for 'side' must be one of:  both, left, right"); }
+  # set default to both
+
+  # dump stringr and go to stringi
+  # dump tidyverse altogether
+  # review httr and build appropriate functions
+  # use base whenever possible, then the best packages whenever possible
+  # define best by "least associated with new grammar tactics"
+  # new grammar is arbitrary and not c-based
+  # human-readable functions with variadic inputs is not new grammar
+# lsf.str("package:stringi")
+# ls("package:stringi")
+
+	if(method == "cpp" && exists("cpp_trim"))
+			{
+			res = switch(side,
+							  "left"  = cpp_ltrim(str),
+							  "right" = cpp_rtrim(str),
+							  "both"  = cpp_trim(str),
+					cpp_trim(str)
+					);
+			return (res);
+			}
+		
+		
+  if( method == "stringi" && isTRUE(requireNamespace("stringi", quietly = TRUE)) )
+    {
+    res = switch(side,
+						  "left"  = stringi::stri_trim_left(str),
+						  "right" = stringi::stri_trim_right(str),
+						  "both"  = stringi::stri_trim_both(str),
+				stringi::stri_trim_both(str)
+				);
+	return (res);
+	}
+	
+	
+		
+    res = switch(side,
+						  "left"  = gsub("^\\s+", "", str),
+						  "right" = gsub("\\s+$", "", str),
+						  "both"  = gsub("^\\s+|\\s+$", "", str),
+                  gsub("^\\s+|\\s+$", "", str)
+                  );
+    return (res);
+  }
+
+
+
+
+```
+
+# GCD
+
+## R function
+```{r}
+gcd.lcm = function(x,y)
+	{
+	a=x;
+	b=y;
+	while (b != 0)
+        {
+		t = b;
+		b = a %% b;
+		a = t;
+        }
+	list("gcd"=a, "lcm"=(x*y)/a);
+  }
+
+gcd.lcm(20,30);
+
+```
+
+
+```{r}
+
+# C:\\_git_\\github\\MonteShaffer\\humanVerse\\cpp
+
+# Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\cpp\\bits.cpp");
+
+```
+
+
+## C++ function
+```{r}
+
+
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\lcm.R.cpp");
+```
+
+```{r}
+
+cpp_gcd(20,30);
+cpp_lcm(20,30);
+
+cpp_gcd_lcm(20,30);
+
+
+x=1444764;
+y=8766;
+
+gcd.lcm(x,y);
+cpp_gcd_lcm(x,y);
+cpp_lcm(x,y);
+```
+
+
+
+## C++ boost function
+```{r}
+
+
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\lcm-boost.R.cpp");
+
+
+computeGCD(20,30);
+computeLCM(20,30);
+
+
+```
+
+### Test 1: (20,30)
+
+```{r}
+x=20;
+y=30;
+
+
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        cpp_gcd(x,y),
+                                        cpp_lcm(x,y),
+                                        cpp_gcd_lcm(x,y),
+                                        computeGCD(x,y),
+                                        computeLCM(x,y),
+                                        gcd.lcm(x,y),
+                                        
+                                        
+                                        times=100000,
+                                        control=list("order"="random","warmup"=100)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+
+```
+
+
+
+### Test 2: (1444764,8766)
+
+```{r}
+# https://cemc.uwaterloo.ca/events/mathcircles/2010-11/Winter/Intermediate_Mar2.pdf
+x=1444764;
+y=8766;
+
+
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        cpp_gcd(x,y),
+                                        cpp_lcm(x,y),
+                                        cpp_gcd_lcm(x,y),
+                                        computeGCD(x,y),
+                                        computeLCM(x,y),
+                                        gcd.lcm(x,y),
+                                        
+                                        times=100000,
+                                        control=list("order"="random","warmup"=100)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+
+```
+
+
+
+# PRIMES
+
+## R function
+```{r}
+prime.pracmaPrimes = function(n, first=FALSE)
+	{
+	# this duplicates the primary logic of pracma::primes
+	# by computing 'sqrt' one time, it speeds up things 'slightly'
+	# it allows for firstN or fromN with first=FLAG
+	gn = n;
+	if(first) { gn = ceiling( n * log(n) + n * log(log(n)) ); }
+	gn.sqrt = floor( sqrt(gn) );  # needs to round down so the "seq by k" doesn't break ...
+
+	p = seq(1, gn, by = 2); # odd numbers
+    q = length(p);
+    p[1] = 2; 	# replace 1 with 2 (prime)
+				# 9 is the first non-prime?
+	if(gn >= 9)
+		{
+		for (k in seq(3, gn.sqrt, by = 2) )
+			{
+			k.idx = (k + 1)/2;
+			if (p[k.idx] != 0)
+				{
+				# using a squared rule on indexes ?
+				k2.idx = (k * k + 1)/2;
+
+				# cat("\n", " k = ", k, "... (k+1/2) = ", k.idx, "... (k * k + 1)/2 = ", k2.idx, "\n");
+
+				p[ seq(k2.idx, q, by = k) ] = 0;
+				}
+			}
+		}
+
+	p = p[p > 0];
+
+	if(first)
+		{
+		p[1:n];
+		} else {
+				p[p < n];
+				}
+	}
+
+x1 = prime.pracmaPrimes(100);
+y1 = prime.pracmaPrimes(100, TRUE);
+```
+
+
+
+## C++ function
+```{r}
+
+
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\primes.R.cpp");
+
+
+
+```
+
+```{r}
+
+x2 = cpp_primes(100);
+y2 = cpp_primes(100, TRUE);
+
+```
+
+
+##### TIMER stuff
+```{r}
+
+.GlobalEnv$.humanVerse = list();
+
+
+timer.start = function(key="DEFAULT")
+	{
+	# this overwrites without any checks?
+	.GlobalEnv$.humanVerse[["timer"]][[key]] = list();
+	.GlobalEnv$.humanVerse[["timer"]][[key]]$start = Sys.time();  # vs. proc.time()
+	}
+	
+timer.stop = function(key="DEFAULT")
+	{
+	if(!exists(key, .GlobalEnv$.humanVerse[["timer"]]))
+		{
+		stop(paste0("Nothing to stop as timer.start for key: ", key, " not called yet!"));
+		}
+	.GlobalEnv$.humanVerse[["timer"]][[key]]$stop = Sys.time();
+	
+	.GlobalEnv$.humanVerse[["timer"]][[key]]$diff = as.numeric(.GlobalEnv$.humanVerse[["timer"]][[key]]$stop)-as.numeric(.GlobalEnv$.humanVerse[["timer"]][[key]]$start);
+	}
+
+
+timer.print = function(key="DEFAULT", return="seconds")
+	{
+	# seconds, pretty-seconds, pretty ...
+	if(!exists(key, .GlobalEnv$.humanVerse[["timer"]]))
+		{
+		stop(paste0("Nothing to print as timer.start/timer.stop for key: ", key, " not called yet!"));
+		}
+	
+	seconds = .GlobalEnv$.humanVerse[["timer"]][[key]]$diff;
+		
+	if(return == "pretty-seconds") { return( timer.pretty.seconds(seconds) ); }
+	
+	if(return == "pretty") { return( timer.pretty(seconds) ); }
+	
+	# DEFAULT
+	seconds;
+	}
+	
+	
+timer.pretty.seconds = function(seconds)
+	{
+	paste0( round(seconds,2), " seconds");	
+	}
+
+# https://stackoverflow.com/questions/572049/convert-seconds-to-days-minutes-and-hours-in-obj-c
+timer.pretty = function(seconds)
+	{
+				str = "";
+	days = floor( seconds / (60 * 60 * 24) );
+		seconds = seconds - days * (60 * 60 * 24);
+				dstr = "days"; if(days == 1) { dstr = "day"; }
+				if(days > 0) { str = paste0(str, days," ",dstr,", "); }
+	hours = floor( seconds / (60 * 60) );
+				hstr = "hours"; if(hours == 1) { hstr = "hour"; }
+				if(days > 0 | hours > 0) { str = paste0(str, hours," ",hstr,", "); }
+		seconds = seconds - hours * (60 * 60);
+	minutes = floor( seconds / 60 );
+				mstr = "minutes"; if(minutes == 1) { mstr = "minute"; }
+				if(days > 0 | hours > 0 | minutes > 0) { str = paste0(str, minutes," ",mstr,", "); }
+		seconds = seconds - minutes * (60);
+
+	paste0( str, round(seconds,2), " seconds");		
+	}
+
+
+
+
+
+
+
+
+
+```
+
+
+### Test 1: (10^3)
+
+```{r}
+timer.start("TEST-1");
+# > timer.print("TEST-1", return="pretty")
+# [1] "2.05 seconds"
+
+n = 10^3;
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        prime.pracmaPrimes(n, FALSE),
+                                        prime.pracmaPrimes(n, TRUE),
+                                        cpp_primes(n, FALSE),
+                                        cpp_primes(n, TRUE),
+                                        
+                                        times=1000,
+                                        control=list("order"="random","warmup"=10)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+timer.stop("TEST-1");
+timer.print("TEST-1");
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+
+
+(ceiling( n * log(n) + n * log(log(n)) ));
+
+```
+
+
+### Test 2: (10^5)
+
+```{r}
+timer.start("TEST-2");
+# > timer.print("TEST-2", return="pretty") # 10^6 at times = 1000
+# [1] "19 minutes, 17.27 seconds"
+
+n = 10^5;
+(ceiling( n * log(n) + n * log(log(n)) ));
+###################################################
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        prime.pracmaPrimes(n, FALSE),
+                                        prime.pracmaPrimes(n, TRUE),
+                                        cpp_primes(n, FALSE),
+                                        cpp_primes(n, TRUE),
+                                        
+                                        times=100,
+                                        control=list("order"="random","warmup"=10)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+
+timer.stop("TEST-2");
+timer.print("TEST-2");
+###################################################
+
+boxplot(mb.res, horizontal=TRUE);
+
+###################################################
+
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+
+```
+
+
+### LIMITS
+
+```{r}
+res = NULL;
+N = 10^(1:7);
+
+timer.start("LIMIT");
+
+for(n in N)
+  {
+  gn = (ceiling( n * log(n) + n * log(log(n)) ));
+  
+  cat("\n", "n = ",n, "\t", "gn = ",gn,"\n");
+  
+  timer.start("A");
+  A = cpp_primes(n, TRUE);
+  timer.stop("A");
+  
+  timer.start("B");
+  B = prime.pracmaPrimes(n, TRUE);
+  timer.stop("B");
+  
+  row = c(n, gn, length(A), max(A), timer.print("A")+1, length(B), max(B), timer.print("B")+1 );
+  res = rbind(res, row);
+  
+  }
+
+res = data.frame(res);
+  rownames(res) = N;
+  colnames(res) = c("n", "gn", "lengthA", "maxA", "timeA", "lengthB", "maxB", "timeB");
+res;
+
+timer.stop("LIMIT");
+timer.print("LIMIT", "pretty");
+
+```
+
+
+#### SCALING
+```{r}
+x = log10(res$n);
+A = res$timeA;
+B = res$timeB;
+maxT = max(A,B);
+
+plot(x,A, ylim=c(0,maxT), type="b", bty="n", cex=2, lwd=2, pch=1, col="#ff0000", main="", xlab="10^n", ylab="Time (seconds)");
+par(new=TRUE);
+plot(x,B, ylim=c(0,maxT), type="b", bty="n", cex=2, lwd=2, pch=2, col="#0000ff", main="", xlab="", ylab="");
+legend("topleft", c("A: C++","B: R"), pch=c(1,2), col=c("#ff0000","#0000ff"), text.col=c("#ff0000","#0000ff"), cex=2, lwd=2, pt.cex=2, bty="n" );
+
+```
+```{r}
+
+par("pty"="s");
+plot(x, log10(res$gn), xlim=c(0,9), ylim=c(0,9) );
+
+```
+
+
+
+#### EFFICIENCY
+```{r}
+round( 100* (A-B)/A  , 3);
+
+```
+
+
+
+
+
+
+
+# COMMENT on PRIMES
+
+This bit-wise approach seems best as it minimizes storage space.  The index (location) of the bit is the "prime" value (maybe -1 because of C++ arr[0] indexing).
+
+The lookup in a range would also be faster ... build a hash-map of bits ...
 
 
 

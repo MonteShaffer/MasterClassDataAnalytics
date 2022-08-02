@@ -1,0 +1,745 @@
+---
+title: "R Notebook - Ramping Up"
+output:
+  html_document:
+    df_print: paged
+---
+
+# 'ls()'
+
+CNTRL-SHIFT-ENTER
+```{r}
+ls();
+ls(all.names=TRUE);
+```
+
+# '.Machine'
+```{r}
+print("== .Machine ==");
+str(.Machine);
+```
+
+# '.Platform'
+```{r}
+
+print("== Platform ==");
+str(.Platform);
+```
+
+
+# '.GlobalEnv'
+```{r}
+
+print("== GlobalEnv ==");
+str(.GlobalEnv);
+```
+
+
+# 'R.Version()'
+```{r}
+
+print("== VERSION ==");
+R.Version();
+```
+
+# 'Sys.getenv()'
+```{r}
+
+print("== SYSTEM ENVIRONMENT ==");
+Sys.getenv();
+```
+
+# '.Options'
+```{r}
+
+# str(.__C__aov);
+print("== OPTIONS ==");
+str(.Options);
+
+```
+
+# '.Last.value'
+```{r}
+foo = function(x) { 3*x^2 - 2*x; }
+.Last.value;
+print("== FORMALS ==");
+formals(foo);
+print("== BODY ==");
+body(foo);
+.Last.value;
+```
+
+# Manual change '.Machine'
+```{r}
+ls();
+ls(all.names=TRUE);
+
+.Machine$monte = "says-hi";
+.Platform$monte = "says=hi";
+
+ls();
+ls(all.names=TRUE);
+```
+
+
+# 'set.seed(NULL)'
+```{r}
+set.seed(NULL);
+.Last.value;
+(ssNULL = runif(100, 1, 10));
+```
+
+```{r}
+ls(all.names=TRUE);
+```
+
+## '.Random.seed'
+```{r}
+str(.Random.seed);
+```
+# 'set.seed(123)'
+```{r}
+set.seed(123);
+.Last.value;
+(ss123 = runif(100, 1, 10));
+```
+
+## '.Random.seed'
+```{r}
+str(.Random.seed);
+```
+
+# Seed 'loss'
+```{r}
+set.seed(123);
+x = y = runif(10, 1, 5);
+x == y;
+identical(x,y);
+x;
+```
+
+## 'while' loop
+```{r}
+delay = 0;
+while( identical(x,y) )
+  {
+  delay = 1 + delay;
+  Sys.sleep(1);
+  if(delay %% 10 == 0) { print(paste0("Delay: ",delay)); }
+  y = runif(10, 1, 5);
+  }
+
+delay;
+y;
+```
+
+## Seed reset
+```{r}
+set.seed(123);
+y = runif(10, 1, 5);
+y;
+```
+
+## 'for' loop
+```{r}
+set.seed(123);
+for(i in 1:10)
+{
+  y = runif(10, 1, 5);
+  print(y);
+}
+```
+
+## CORRECT syntax
+```{r}
+for(i in 1:5)
+{
+  set.seed(123); 
+  y = runif(10, 1, 5);
+  print(y);
+}
+```
+
+
+# 'get.seed'
+The purpose of seeding is for replicability across devices and time.  If you can save the seed when you set.seed(store_seed), then you could get.seed
+
+* does an inverse exist
+* does it meet the primary "uses cases"
+      - set/get seed
+      - multiple memories
+* is it 'intuitive' with options for different 'use cases' ... SEE 'rand()'
+
+## '.humanVerse'
+The humanVerse will track the memory of seeds, and other things.  An initialization routine is part of the library, so this will auto-load.  For now,
+
+```{r}
+.GlobalEnv$.humanVerse = list();
+
+
+#' initSeedMemory
+#'
+#' @param purge.memory If TRUE, this memory is erased and reset.
+#'
+#' @return NULL (nothing)
+#' @export
+#'
+#' @examples
+#' # initSeedMemory();
+#' # setSeed(); getSeed(); initSeedMemory(purge.memory = TRUE); getSeed();
+initSeedMemory = function(purge.memory = FALSE, verbose = FALSE)
+  {
+  if(!exists(".humanVerse")) { initMemory(); }
+
+  if(!exists("seed", .GlobalEnv$.humanVerse) || purge.memory)
+    {
+    if(verbose)
+      {
+	    cat("humanVerse::initSeedMemory ... initializing list '.humanVerse[[\"seed\"]]'", "\n");
+      }
+    .GlobalEnv$.humanVerse[["seed"]] = list();
+    }
+  }
+
+```
+
+## 'initSeedMemory' in '.humanVerse'
+```{r}
+initSeedMemory( verbose = TRUE);
+```
+
+## '.humanVerse' is hidden
+```{r}
+str(.humanVerse);
+```
+
+
+
+## functions depend on 'rand'
+```{r}
+
+rand = function(min = -1*as.integer(Sys.time()), max = as.integer(Sys.time()), n = 1, method = "high-low", sample.replace = TRUE, seed = NULL, attributes=NULL)
+    {
+	# if(is.null(seed)) { setSeed(NULL, "rand"); my.seed = getSeed("rand"); } else { my.seed = seed; }
+    me = substr( trimMe( tolower(method) ), 1, 2);
+	n = as.integer ( n );
+	if(is.na(n) || n < 1)
+		{
+		warning( paste0('Bad value for n "', n, '" in function [rand]', "\n", "Setting n=1") );
+		n = 1;
+		}
+	res = NULL;
+    if(me == "fl")  # floor method
+      {
+	  if(!is.null(seed)) { set.seed(seed); }
+      res = ( as.integer( floor( stats::runif(n, min = min, max = (max + 1) ) ) ) );
+      }
+    else if(me == "sa")  # sample method
+      {
+      if(!sample.replace)
+        {
+        len = (max - min) + 1;
+        if(len < n)
+          {
+          warning( "sample.replace forced to TRUE" );
+          sample.replace = TRUE;
+          }
+        }
+	  if(!is.null(seed)) { set.seed(seed); }
+      res = ( sample(min:max, n, replace = sample.replace) );
+      }
+	else
+		{
+		if(me != "hi")  # high-low method
+			{
+			warning( paste0('Bad value for method "', method, '" in function [rand]', "\n", "Setting method='high-low'") );
+			}
+		# DEFAULT will run 
+		if(!is.null(seed)) { set.seed(seed); }
+		res = ( as.integer(( (max + 1) - min) * stats::runif(n) + min) );
+		}
+		
+	if(!is.null(attributes))
+		{
+		res = setAttribute('min', min, res);
+		res = setAttribute('max', max, res);
+		res = setAttribute('seed', seed, res);
+		res = setAttribute('method', method, res);	
+		}
+	
+	res;
+    }
+
+
+
+
+```
+
+## HELPER functions
+```{r}
+
+trimMe = function(str, side="both", method="stringi")
+  {
+  # sides = c("both", "left", "right")
+  # methods = c("cpp", "stringi", "base")
+  side = tolower(side);
+  ###m = substr(tolower(method),1,1);  # is this slowing me down?
+  # stringr::str_trim(str);
+  # if(!is.element(side,sides)) { stop("option for 'side' must be one of:  both, left, right"); }
+  # set default to both
+
+  # dump stringr and go to stringi
+  # dump tidyverse altogether
+  # review httr and build appropriate functions
+  # use base whenever possible, then the best packages whenever possible
+  # define best by "least associated with new grammar tactics"
+  # new grammar is arbitrary and not c-based
+  # human-readable functions with variadic inputs is not new grammar
+# lsf.str("package:stringi")
+# ls("package:stringi")
+
+	if(method == "cpp" && exists("cpp_trim"))  # humanVerse ... HVcpp
+			{
+			res = switch(side,
+							  "left"  = cpp_ltrim(str),
+							  "right" = cpp_rtrim(str),
+							  "both"  = cpp_trim(str),
+					cpp_trim(str)
+					);
+			return (res);
+			}
+		
+		
+  if( method == "stringi" && isTRUE(requireNamespace("stringi", quietly = TRUE)) )
+    {
+    res = switch(side,
+						  "left"  = stringi::stri_trim_left(str),
+						  "right" = stringi::stri_trim_right(str),
+						  "both"  = stringi::stri_trim_both(str),
+				stringi::stri_trim_both(str)
+				);
+	return (res);
+	}
+	
+	
+		
+    res = switch(side,
+						  "left"  = gsub("^\\s+", "", str),
+						  "right" = gsub("\\s+$", "", str),
+						  "both"  = gsub("^\\s+|\\s+$", "", str),
+                  gsub("^\\s+|\\s+$", "", str)
+                  );
+    return (res);
+  }
+
+
+
+setAttribute = function(myAttribute, myValue, myObj)
+	{
+	attributes(myObj)[[myAttribute]] = myValue;
+	myObj;  # no object referencing, so I must return
+	}
+
+
+```
+
+## 'initSeed'
+```{r}
+
+#' initSeed
+#'
+#' @param ... Parameters that can be passed onto the 'rand' function
+#'
+#' @return A single integer
+#' @export
+#'
+#' @examples
+#' # initSeed();
+#' # initSeed(1, 10^5, method="floor");
+initSeed = function(...)
+  {
+  rand(...)[1];  # if they wrongly passed in n > 1, we only return [1]
+  }
+
+```
+
+```{r}
+initSeed();
+```
+
+## 'setSeed'
+```{r}
+
+#' setSeed
+#'
+#' @param seed
+#' @param key
+#' @param ...
+#' @param args.set
+#' @param print.seed
+#' @param verbose
+#'
+#' @return
+#' @export
+setSeed = function(seed, key, ..., args.set = list(), print.seed = TRUE, verbose = FALSE )
+  {
+  # can I have two ellipses in a single function?
+    # one for initSeed
+    # one for set.seed
+    # nope, argslist
+  if( missing(key) ) { key = "last"; }
+  if(is.null(seed))
+    {
+    seed = initSeed(...);
+    if(verbose)
+      {
+      cat("setSeed :: generating new integer seed ... ", "\t", seed, "\n");
+      }
+    initSeedMemory();
+    }
+  
+  if( !exists("kind", args.set) )         { kind = NULL; }
+  if( !exists("normal.kind", args.set) )  { normal.kind = NULL; }
+  if( !exists("sample.kind", args.set) )  { sample.kind = NULL; }
+  
+  my.seed = seed;
+	my.seed = setAttribute("kind", kind, my.seed);
+	my.seed = setAttribute("normal.kind", normal.kind, my.seed);
+	my.seed = setAttribute("sample.kind", sample.kind, my.seed);
+	
+  .GlobalEnv$.humanVerse[["seed"]][[key]] = my.seed;
+  if(verbose)
+      {
+      cat("setSeed :: global value stored [key] = ",key," ... [seed] = ",seed, "\n");
+      }
+	  
+  if(verbose)
+      {
+      cat("setSeed :: calling base::set.seed with seed ... ", seed, "\n");
+      }
+
+  if(print.seed)
+	{
+	cat("\n setSeed: ", seed, "\n");
+	}
+  
+# call set.seed at very end ...
+  set.seed(seed, kind=kind, normal.kind=normal.kind, sample.kind=sample.kind);
+# we don't return the seed, but we could?  getSeed will handle this ... 
+  # invisible(seed);
+  }
+
+
+```
+
+### 'setSeed(NULL)'
+```{r}
+setSeed(NULL);  # behaves like the 'normal set.seed() function'
+sSNULL = runif(100, 1, 10);
+```
+
+#### EQUAL?
+```{r}
+identical(ssNULL, sSNULL);
+```
+They have different seeds since 'NULL' doesn't something blind under the hood.
+
+### 'setSeed(123)'
+```{r}
+setSeed(123);
+(sS123 = runif(100, 1, 10));
+```
+
+#### EQUAL?
+```{r}
+identical(ss123, sS123);
+```
+This is the whole reason we have the idea of 'set.seed' so we can get REPLICABLE results across time, space, and computing machinery.
+
+Where is the inverse of setSeed; e.g., getSeed
+
+## 'getSeed'
+```{r}
+
+#' getSeed
+#'
+#' @param key
+#' @param verbose
+#'
+#' @return
+#' @export
+#'
+#' @examples
+getSeed = function(key, keep.attributes = FALSE, verbose = FALSE)
+  {
+  # I could create a "keyed" list of memory, not just last ...
+  if( missing(key) ) { key = "last"; }
+  if(verbose) { cat("getSeed :: looking up key ... ", "\t", key); }
+  if(exists(key, .GlobalEnv$.humanVerse[["seed"]]))
+    {
+    if(verbose) { cat("\n\t ... found with value: ", "\t", .GlobalEnv$.humanVerse[["seed"]][[key]], "\n"); }
+    my.seed = .GlobalEnv$.humanVerse[["seed"]][[key]];
+	if(!keep.attributes) { my.seed = as.integer(my.seed); }
+	my.seed;
+    } else { FALSE; }
+  }
+
+
+
+```
+
+### getSeed() ... last value
+```{r}
+getSeed();
+```
+
+## Good algebra
+Now we can set/get a seed ... QED
+
+```{r}
+setSeed(NULL);
+sS1 = rnorm(100);
+getSeed();
+setSeed(getSeed());
+sS2 = rnorm(100);
+```
+
+### EQUAL?
+```{r}
+identical(sS1,sS1);
+```
+
+## Multiple memories
+We have a key notation to remember as many as we want.  If we don't pass a key, we only have the 'last one' as a memory.
+
+```{r}
+setSeed(NULL, "uniform");  # this is how 'random' research should be done
+setSeed(NULL, "normal");   # pass in a random value
+
+
+(u.seed = getSeed("uniform"));
+(n.seed = getSeed("normal"));
+
+
+```
+
+### SIMULATE ME
+```{r}
+sim = NULL;
+
+I = 1:5;
+J = 1:6;
+N = 100;
+U = c(-2,2);
+
+for(i in I)
+{
+setSeed(NULL, "uniform");
+u.dist = runif(N, U[1], U[2]);
+(u.seed = getSeed("uniform"));
+  for(j in J)
+  {
+  setSeed(NULL, "normal");
+  n.dist = rnorm(N);
+  (n.seed = getSeed("normal"));
+  
+  u.median = median(u.dist);
+  n.median = median(n.dist);
+  row = c(i, j, u.seed, u.median, n.seed, n.median, median(u.dist*n.dist), u.median*n.median );
+  sim = rbind(sim,row);
+  }
+}
+
+sim = data.frame(sim);
+colnames(sim) = c("i", "j", "u.seed", "u.median", "n.seed", "n.median", "median(u*n)", "median(u)*median(n)");
+
+sim = setAttribute("details", list("I"=I,"J"=J,"N"=N,"U"=U), sim);
+
+sim;
+```
+
+We have stored the 'seeds' so we could rebuild this entire simulation from the data.  
+
+**GOOD DATA SCIENCE**
+
+```{r}
+str(sim);
+```
+
+I set truly "PSEUDO-RANDOM" seeds, not just using the classic 'set.seed(123);'
+
+If I had the code base AND the data, I could rebuild the entire simulation.
+
+
+This is what **TRUE OPEN DATA SCIENCE** should look like.
+
+
+```{r}
+getAllAttributes = function(myObj)
+	{
+	attributes(myObj);
+	}
+```
+
+### REPLICATION CHECK
+```{r}
+sim.check = NULL;
+
+details = getAllAttributes(sim)$details;
+
+lookupSeed.I = function(n, df)
+  {
+  r = which( (as.numeric(df["i"] == n)) == 1)[1];
+  df[r,]$u.seed;
+  }
+
+
+lookupSeed.J = function(n, u.seed, df)
+  {
+  i = which( (as.numeric(df["u.seed"] == u.seed)) == 1);
+  j = which( (as.numeric(df["j"] == n)) == 1);
+  r = intersect(i,j)[1];
+  df[r,]$n.seed;
+  }
+
+I = as.numeric( unlist( details["I"] ) );       # I = as.integer( unlist( details["I"] ) );
+J = as.numeric( unlist( details["J"] ) );       # J = as.integer( unlist( details["J"] ) );
+N = as.numeric( unlist( details["N"] ) );       
+U = as.numeric( unlist( details["U"] ) );       
+
+for(i in I)
+{
+setSeed( lookupSeed.I(i, sim), "uniform");
+u.dist = runif(N, U[1], U[2]);
+(u.seed = getSeed("uniform"));
+  for(j in J)
+  {
+  setSeed( lookupSeed.J(j, u.seed, sim), "normal");
+  n.dist = rnorm(N);
+  (n.seed = getSeed("normal"));
+  
+  u.median = median(u.dist);
+  n.median = median(n.dist);
+  row = c(i, j, u.seed, u.median, n.seed, n.median, median(u.dist*n.dist), u.median*n.median );
+  sim.check = rbind(sim.check,row);
+  }
+}
+
+sim.check = data.frame(sim.check);
+colnames(sim.check) = c("i", "j", "u.seed", "u.median", "n.seed", "n.median", "median(u*n)", "median(u)*median(n)");
+
+sim.check = setAttribute("details", list("I"=I,"J"=J,"N"=N,"U"=U), sim.check);
+
+sim.check;
+
+```
+
+```{r}
+str(sim.check);
+```
+
+#### EQUAL?
+```{r}
+identical(sim, sim.check);
+```
+
+EASTER +10:  WHY ARE THEY NOT IDENTICAL?
+
+#### EQUAL by pieces?
+```{r}
+identical( sim$i,       sim.check$i );
+identical( sim$u.seed,  sim.check$u.seed );
+identical( sim$j,       sim.check$j );
+identical( sim$n.seed,  sim.check$n.seed );
+```
+
+#### EQUAL loop
+
+```{r}
+sim.names = colnames(sim);
+for(sim.name in sim.names)
+  {
+  print(sim.name);
+  # sim$i == unlist( sim["i"] ) ... almost equivalent, one is variadic
+  print( identical(sim[sim.name], sim.check[sim.name]) );
+  }
+
+```
+Above shows it is not an issuing with floating point.
+
+#### EQUAL attributes?
+```{r}
+( attr.sim = getAllAttributes(sim) );
+( attr.sim.check = getAllAttributes(sim.check) );
+
+identical(attr.sim, attr.sim.check);
+
+```
+
+```{r}
+
+names(attr.sim) == names(attr.sim.check);
+
+```
+##### Loop over names
+```{r}
+attr.names = names(attr.sim);
+
+for(attr.name in attr.names)
+  {
+  print(attr.name);
+  print( identical(attr.sim[attr.name], attr.sim.check[attr.name]) );
+  }
+```
+
+##### 'details' attribute is issue
+```{r}
+str(attr.sim$details);
+str(attr.sim.check$details);
+
+identical(attr.sim$details, attr.sim.check$details);
+```
+
+##### Type (casting) issue
+```{r}
+str(attr.sim$details$I);
+str(attr.sim.check$details$I);
+
+```
+
+There it is.  I run R which is "loosely" typed.  One time, R decides I is an integer, the other time it decides I is a number.  
+
+```{r}
+# solution ... change value on left to value on the right
+I = as.numeric( unlist( details["I"] ) );       I = as.integer( unlist( details["I"] ) );
+J = as.numeric( unlist( details["J"] ) );       J = as.integer( unlist( details["J"] ) );
+
+(I = 1:5);        str(I);
+(J = 1:6);        str(J);
+(N = 100);        str(N);
+(U = c(-2,2));    str(U);
+```
+
+```{r}
+N2 = 100:100;             str(N2);
+U2 = seq(-2,2, by=4);     str(U2);
+U3 = seq(2,12, by=4);     str(U3);
+```
+
+I expected the sequences to be integers, but "R" doesn't have negative integers so it casts it as a "numeric"?  I could recast using as.integer on a sequence to use as part of a 'for' loop, but it appears these numerics work fine (loosely typed) in the 'for' loop but not the 'identical' check.
+
+Under the hood it appears there are subtle differences.  Don't worry, they may change SILENTLY under the radar by the core R-dev team.  You will never know unless you carefully read the CHANGELOG.  And of course, they will tell you to RTFM!
+
+```{r}
+identical(N, N2);
+```
+
+```{r}
+str(3* 100:100);
+str(3.14 * 100:100);
+```
+
+
+A good algebra works as expected.  In the same breath you can't say "It is loosely typed" and then say "you have to be careful with your numeric typing".  
+
+As a result, you will have such issues as demonstrated above.

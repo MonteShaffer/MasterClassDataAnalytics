@@ -304,6 +304,9 @@ Since the library 'stringi' is written in C++, it has some native efficiencies o
 This will source and compile the code.  Maybe give it a minute.
 ```{r}
 Rcpp::sourceCpp("multiply.cpp");
+
+# setwd("C:\\_git_\\github\\MonteShaffer\\MasterClassDataAnalytics\\-course-\\02.020_hello-world-notebook\\");
+# Rcpp.package.skeleton("test", cpp_files = "C:\\_git_\\github\\MonteShaffer\\MasterClassDataAnalytics\\-course-\\02.020_hello-world-notebook\\multiply.cpp")
 ```
 
 ```{r}
@@ -315,7 +318,17 @@ B = matrix(rnorm(10000), 100, 100);
 
 ```{r}
 library(microbenchmark);
-microbenchmark::microbenchmark(eigenMatTrans(A),A%*%B, armaMatMult(A, B), eigenMatMult(A, B), eigenMapMatMult(A, B))
+microbenchmark::microbenchmark(
+                                t(A),
+                                eigenMatTrans(A)
+                                );
+microbenchmark::microbenchmark(
+                                A%*%B, 
+                                armaMatMult(A, B), 
+                                eigenMatMult(A, B), 
+                                eigenMapMatMult(A, B)
+                                );
+
 
 ```
 It appears 'eigen' performs well for me; 'arma' is about equivalent to the built-in R multiplication.
@@ -366,7 +379,51 @@ img.file = "iris-ocr-intro.png";
 img = magick::image_read( img.file );
 img.txt = tesseract::image_ocr(img);
 
+
+
 cat(img.txt);
+```
+
+```{r}
+path = img.file;
+
+# .Machine
+# .Platform
+# .Last.value
+# .Random.seed
+# Sys.getenv()
+# ls(pattern="*ach*", all.names=TRUE);
+# ls(pattern="str*")
+
+    
+    image <- if (isS4(path) && methods::is(path, "Image")) {
+        convert_EBImage(path)
+    } else if (inherits(path, "nativeRaster") || (is.matrix(path) && 
+        is.integer(path))) {
+        image_read_nativeraster(path)
+    } else if (inherits(path, "cimg")) {
+        image_read_cimg((path))
+    } else if (grDevices::is.raster(path)) {
+        image_read_raster2(path)
+    } else if (is.matrix(path) && is.character(path)) {
+        image_read_raster2(grDevices::as.raster(path))
+    } else if (is.array(path)) {
+        image_readbitmap(path)
+    } else if (is.raw(path)) {
+        magick_image_readbin(path, density, depth, strip, defines)
+    } else if (is.character(path) && all(nchar(path))) {
+        path <- vapply(path, replace_url, character(1))
+        path <- if (is_windows()) {
+            enc2utf8(path)
+        }
+        else {
+            enc2native(path)
+        }
+        magick_image_readpath(path, density, depth, strip, defines)
+    } else {
+        stop("path must be URL, filename or raw vector")
+    }
+
 ```
 
 
