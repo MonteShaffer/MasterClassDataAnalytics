@@ -331,7 +331,7 @@ trimMe = function(str, side="both", method="stringi")
 
 # C:\\_git_\\github\\MonteShaffer\\humanVerse\\cpp
 
-Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\str.R.cpp");
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\HVcpp\\src\\str.R.cpp");
 
 ### Rcpp::sourceCpp("https://raw.githubusercontent.com/MonteShaffer/humanVerse/main/humanVerse/src/cpp/str.cpp"); # DOESN"T WORK
 
@@ -765,7 +765,7 @@ gcd.lcm(20,30);
 ```{r}
 
 
-Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\lcm.R.cpp");
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\HVcpp\\src\\lcm.R.cpp");
 ```
 
 ```{r}
@@ -790,7 +790,7 @@ cpp_lcm(x,y);
 ```{r}
 
 
-Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\lcm-boost.R.cpp");
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\HVcpp\\src\\lcm-boost.R.cpp");
 
 
 computeGCD(20,30);
@@ -933,7 +933,7 @@ y1 = prime.pracmaPrimes(100, TRUE);
 ```{r}
 
 
-Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\-cpp-\\primes.R.cpp");
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\HVcpp\\src\\primes.R.cpp");
 
 
 

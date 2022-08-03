@@ -1,0 +1,838 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# BITS
+```{r}
+
+# https://stackoverflow.com/questions/64839024/
+# https://stackoverflow.com/questions/37121897/
+# Rcpp::cppFunction("long long RShift(long long a, int b) { return a >> b;}");
+# Rcpp::cppFunction("long long LShift(long long a, int b) { return a << b;}");
+####### Rcpp::cppFunction("long long ShiftR(long long a, int b) { return a >> b;}");
+####### Rcpp::cppFunction("long long ShiftL(long long a, int b) { return a << b;}");
+
+# https://cran.r-project.org/web/packages/Rcpp/vignettes/Rcpp-package.pdf
+####### Rcpp::cppFunction("long long ShiftR(long long a, int b) { return a >> b;}");
+####### Rcpp::cppFunction("long long ShiftL(long long a, int b) { return a << b;}");
+#' ShiftR(1732584193, 16);		# 26437
+#' ShiftR(-1732584193, 16);		# -26438
+# http://adv-r.had.co.nz/Rcpp.html
+# https://www.geeksforgeeks.org/bitwise-operators-in-c-cpp/
+# https://stackoverflow.com/questions/34011318/in-c-can-you-use-a-dot-in-variable-or-function-names/34011346
+####### Rcpp::cppFunction("long long bit_shiftR(long long a, int b) { return a >> b;}");
+####### Rcpp::cppFunction("long long bit_shiftL(long long a, int b) { return a << b;}");
+####### Rcpp::cppFunction("long long bit_OR(long long a, long long b) { return a | b;}");
+####### Rcpp::cppFunction("long long bit_XOR(long long a, long long b) { return a ^ b;}");
+####### Rcpp::cppFunction("long long bit_AND(long long a, long long b) { return a & b;}");
+####### Rcpp::cppFunction("long long bit_NOT(long long a) { return ~ a ;}");
+
+# convert from bits to integer and reverse 
+# https://www.geeksforgeeks.org/convert-an-integer-to-bits-in-r-programming-inttobits-function/#:~:text=Convert%20an%20Integer%20to%20Bits%20in%20R%20Programming%20%E2%80%93%20intToBits()%20Function&text=intToBits()%20function%20in%20R,the%20length%20of%20integer%20vector.
+# base::intToBits ... type = raw ... 
+# https://stackoverflow.com/questions/6614283/converting-decimal-to-binary-in-r
+
+# these are the PHP names ... 
+decbin <- function(fnum) {
+  bin_vect <- rep(0, 1 + floor(log(fnum, 2)))
+  while (fnum >= 2) {
+    pow <- floor(log(fnum, 2))
+    bin_vect[1 + pow] <- 1
+    fnum <- fnum - 2^pow
+  } # while
+  bin_vect[1] <- fnum %% 2
+  paste(rev(bin_vect), collapse = "")
+} #dec2bin
+
+
+  # http://php.net/manual/en/function.hexdec.php
+  # http://php.net/manual/en/function.dechex.php
+  
+  # https://www.mathworks.com/help/matlab/ref/bin2dec.html
+  # bin2dec is matlab
+  # bindec is PHP 
+  
+  # Convert text representation of binary integer to double value
+  
+
+bindec = function(binstr)
+	{
+	n = strlen(binstr);
+	res = 0; power = 0;
+	for(i in n:1)
+		{
+		bit = as.integer(charAt(binstr,i));
+		add = 0;
+		if(bit == 1) { add = 2^power; }
+		
+		res = res + add;
+		power = 1 + power;
+		}
+	res;
+	}
+
+
+
+dec2bin = function(decnum) 
+	{
+	bvect = rep(0, 1 + floor(log(decnum, 2))); # pre-populate with zeroes
+	while (decnum >= 2) 
+		{
+		power = floor(log(decnum, 2));
+		bin_vect[1 + power] = 1;
+		decnum = decnum - 2^power;
+		} 
+	bvect[1] = decnum %% 2;
+	paste(rev(bvect), collapse = ""); # convert to a string
+	} 
+
+
+#' bitShiftR
+#'
+#' This updates the built-in functions to allow for negative integers.
+#' Used for manual '.md5' computation, and has some issues.
+#' Maybe R::CRAN will fix this someday in the base?
+#'
+#' @param x integer
+#' @param bits bits
+#' @param unsigned is it signed or not
+#'
+#' @return new integer
+#' @export
+#'
+#' @examples
+#' bitShiftR(1732584193, 16);		# 26437
+#' bitShiftR(-1732584193, 16);		# -26438
+# bit.shift.right
+bitShiftR = function(x, bits, unsigned=FALSE)
+  {
+  if(!is.negative(x) | unsigned) { return( bitwShiftR(x,bits) ); }
+  -bitwShiftR(-x,bits) - 1; #  - 1;                  # >>>
+  # https://stackoverflow.com/questions/64839024/using-r-how-to-do-bitwise-shifting-for-signed-negative-integers
+  # maybe ... Rshift <- function(val, nbits) floor(val/2^nbits)
+  }
+
+#' bitShiftL
+#'
+#' This updates the built-in functions to allow for negative integers.
+#' Used for manual '.md5' computation, and has some issues.
+#' Maybe R::CRAN will fix this someday in the base?
+#'
+#' @param x integer
+#' @param bits bits
+#' @param unsigned is it signed or not
+#'
+#' @return new integer
+#' @export
+#'
+#' @examples
+#' bitShiftL(1732, 16);
+#' bitShiftL(-1732, 16);
+# bit.shift.left
+bitShiftL = function(x, bits, unsigned=FALSE)
+  {
+  if(!is.negative(x) | unsigned)
+    {
+    tmp = suppressWarnings( bitwShiftL(x,bits) );                # <<<
+    if(is.na(tmp)) { tmp = -2^31; }  # 0x80 << 24
+    return( tmp );
+    }
+  tmp = suppressWarnings( -bitwShiftL(-x,bits) ); # - 1;                  # <<<
+  if(is.na(tmp))
+    {
+    tmp = 2^31;
+    if(is.negative(x)) { tmp = -1 * tmp; }
+    }
+  tmp;
+  }
+
+
+#' bitOr
+#'
+#' This updates the built-in functions to allow for negative integers.
+#' Used for manual '.md5' computation, and has some issues.
+#' Maybe R::CRAN will fix this someday in the base?
+#'
+#' Specifically, this addresses overflows ...
+#'
+#' @param a integer 'a'
+#' @param b integer 'b'
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#' bitOr(15, 7);
+# bit.or
+bitOr = function(a, b)
+  {
+  if(!is.negative(a) && ( b <= -1 * 2^31) )
+    {
+    return (a + b);
+    }
+  if(!is.negative(b) && ( a <= -1 * 2^31) )
+    {
+    return (a + b);
+    }
+  bitwOr(a,b);
+  }
+
+
+
+
+
+
+```
+
+# MD5 functions
+
+```{r}
+setAttribute = function(myAttribute, myValue, myObj)
+	{
+	attributes(myObj)[[myAttribute]] = myValue;
+	myObj;  # no object referencing, so I must return
+	}
+
+# stats.median
+doMedian = function(x, type=1)
+  {
+  xx = stats::na.omit(x);
+  as.numeric(stats::quantile(xx, prob=c(0.5), type=type));
+  }
+
+
+
+benchmark.efficiency = function(mb.res)
+	{
+	mb.names = levels(mb.res$expr);
+	
+	out = NULL;
+
+	A.name 		= mb.names[1];
+	A 			= subset(mb.res, expr==A.name)$time;
+	A.median 	= doMedian(A);
+
+	row = c(1,A.name,A.median,0); # BENCHMARK, delta efficiency is 0
+	out = rbind(out, row);
+
+	n.names = length(mb.names);
+	if(n.names > 1)
+		{
+		for(i in 2:n.names)
+			{
+			B.name 		= mb.names[i];
+			B 			= subset(mb.res, expr==B.name)$time;
+			B.median 	= doMedian(B);
+	
+			B.eff 		= round(100* (A.median-B.median)/A.median , 2);
+
+			row = c(i,B.name,B.median,B.eff);
+			out = rbind(out, row);
+			}
+		}
+
+	out = data.frame(out);
+	colnames(out)=c("Index","Name","Median","Delta.Efficiency");
+	# rownames(out)=out$Name;
+	rownames(out) = NULL;
+		out$Median = as.numeric(out$Median);
+		out$Delta.Efficiency = as.numeric(out$Delta.Efficiency);
+		#out$Ranking = order(out$Delta.Efficiency, decreasing=TRUE); # not to be confused with 'rank'
+		out$Rank = rank(out$Median, ties="first");
+	
+	out = setAttribute("microbenchmark.unit",.Options$microbenchmark.unit,out);
+		
+	out;
+	}
+
+md5.object = function(list)
+	{
+	str = listToString(list);
+	md5(str);	
+	}
+
+#' md5.digest
+#'
+#' @param strvec a character vector of strings
+#' @param serialize a parameter passed to the function digest()
+#' @param times how many times `n` you want to perform the md5(str)
+#'
+#' @return a character vector of equal length, with md5 hashes of each string in original vector
+#' @export
+#'
+#' @examples
+#' md5.digest("password");
+#'   # the encryption is one-way, yet a dictionary can "hack"
+#'   # See <https://crackstation.net/> for an example Rainbow Table
+#'   # The best modern tool I have found is SJCL <https://github.com/bitwiseshiftleft/sjcl>
+#' md5.digest("password", times=9); # this will make the Rainbow Table work
+#'   # if you know the original value and the times=n offset, you could build an internal Rainbow Table
+#'
+#' md5.digest("The quick brown fox jumps over the lazy dog");
+#' md5.digest( unlist( base::strsplit("The quick brown fox jumps over the lazy dog", " ", fixed=TRUE) ) );
+#'
+#' md5.digest("monte.shaffer@gmail.com", 9);
+
+md5.digest = function(strvec, times=1, serialize=FALSE)
+  {
+  if (requireNamespace("digest", quietly = TRUE))
+    {
+	  ####################### digest is not vector driven ... # `apply` could work ...
+	  n = length(strvec);
+	  nvec = c();
+	  for(i in 1:n)
+		{
+		myval = digest::digest(strvec[i], algo="md5", serialize=serialize);
+		if(times > 1)
+		  {
+		  for(j in 2:times)
+			{
+			myval = digest::digest(myval, algo="md5", serialize=serialize);
+			}
+		  }
+		nvec[i] = myval;
+		}
+	  nvec;
+	} else { return (NULL); }
+  }
+
+
+#' md5
+#'
+#' @param strvec a character vector of strings
+#' @param serialize a parameter passed to the function digest()
+#' @param times how many times `n` you want to perform the md5(str)
+#'
+#' @return a character vector of equal length, with md5 hashes of each string in original vector
+#' @export
+#'
+#' @examples
+#' md5("password");
+#'   # the encryption is one-way, yet a dictionary can "hack"
+#'   # See <https://crackstation.net/> for an example Rainbow Table
+#'   # The best modern tool I have found is SJCL <https://github.com/bitwiseshiftleft/sjcl>
+#' md5("password", times=9); # this will make the Rainbow Table work
+#'   # if you know the original value and the times=n offset, you could build an internal Rainbow Table
+#'
+#' md5("The quick brown fox jumps over the lazy dog");
+#' md5( unlist( base::strsplit("The quick brown fox jumps over the lazy dog", " ", fixed=TRUE) ) );
+#'
+#' md5("monte.shaffer@gmail.com", 9);
+md5 = function(strvec, times=1)
+  {
+  # https://cran.r-project.org/web/packages/openssl/openssl.pdf
+  # md5(serialize)?
+  # digest is not vector driven ... # `apply` could work ...
+  if (requireNamespace("openssl", quietly = TRUE))
+    {
+    nstrvec = openssl::md5(strvec);
+    if(times > 1)
+        {
+        for(j in 2:times)
+          {
+          nstrvec = openssl::md5(nstrvec);
+          }
+        }
+    return( nstrvec );
+    } else {
+            if (requireNamespace("digest", quietly = TRUE))
+              {
+              return( md5.digest(strvec,times) );
+              } else {
+                      # do INTERNAL .md5 very slow
+          					  n = length(strvec);
+          					  nstrvec = character(n);
+          					  for(i in 1:n)
+          						{
+          						nstrvec[i] = .md5(strvec[i]);
+          						for(j in 2:times)
+          						  {
+          						  nstrvec[i] = .md5(nstrvec[i]);
+          						  }
+          						}
+          					  return( nstrvec );
+                      }
+
+            }
+	# should never get here with SLOW INTERNAL
+  stop("`openssl` or `digest` must be installed to use `md5()`");
+  }
+
+
+
+
+
+#' .md5
+#'
+#' This is a univariate function ...
+#'
+#' @param s a string as an input
+#'
+#' @return an md5-string output
+#' @export
+#'
+#' @examples
+#' .md5("The quick brown fox jumps over the lazy dog");
+#' .md5("alex 22");
+.md5 = function(s)
+  {
+  # http://md5.mshaffer.com/         ... circa 2005 ???
+  # http://md5.mshaffer.com/md5.js
+  # https://tools.ietf.org/html/rfc1321 ... ported from c -> javascript -> R
+
+  s = s[1]; # this is not vectorized ... very slow
+  w = 8 * nchar( as.character(s), type="chars");
+  hex = "0123456789abcdef";
+  # w is length, so >>> should be >>
+  L = bitShiftL( bitShiftR(w+64,9, TRUE), 4) + 15;
+  x = numeric(L+15);
+  i = 1; j = 1;
+  while(i < w)
+    {
+    idx = bitShiftR(i,5) + 1;
+    # print(idx);
+    mychar = bitShiftL( bitwAnd( charCodeAt(s,j), 255), ((i-1) %% 32));
+    nx = bitwOr(x[idx], mychar); # print(nx);
+    x[idx] = nx;
+    i = 8 + i;
+    j = 1 + j;
+    }
+
+
+  idx = bitShiftR(w,5)+1;
+  # x[w>>5] |= 0x80 << ((w)%32);
+  # nx = bitwOr( x[idx], bitShiftL( 0x80, (w %% 32)) );
+  nx = bitOr( x[idx], bitShiftL( 0x80, (w %% 32), unsigned=TRUE) );  # prevent some overflow
+
+
+  x[idx] = nx;
+  x[L] = w;
+
+############### .INTERNAL FUNCTIONS ###############
+# Shifting is done assuming the values represent unsigned integers.
+  X = function (xx,yy)
+    {
+    l = bitwAnd(xx, 0xFFFF) + bitwAnd(yy, 0xFFFF);
+    m = bitShiftR(xx,16) + bitShiftR(yy,16) + bitShiftR(l,16);
+    bitwOr( bitShiftL(m,16),  bitwAnd(l, 0xFFFF) ); ## will this overflow?
+    # bitOr
+    }
+  Y = function (qi,aa,bb,xi,si,ti)
+    {
+    X(Z(X(X(aa,qi),X(xi,ti)),si),bb);
+    }
+  Z = function (ni,ci)
+    {
+    # print(ni);
+    # print(ci);
+    bitwOr( bitShiftL(ni,ci), bitShiftR(ni,32-ci,TRUE) );
+    }
+
+
+  A = function (aa,bb,cc,dd,xi,si,ti)
+    {
+    Y( (bitwOr( bitwAnd(bb,cc), bitwAnd(bitwNot(bb),dd) )),
+        aa,bb,xi,si,ti);
+    }
+  B = function (aa,bb,cc,dd,xi,si,ti)
+    {
+    Y( (bitwOr( bitwAnd(bb,dd), bitwAnd(cc,bitwNot(dd)) )),
+        aa,bb,xi,si,ti);
+    }
+	C = function (aa,bb,cc,dd,xi,si,ti){
+	  Y( (bitwXor(bb,bitwXor(cc,dd))),
+	      aa,bb,xi,si,ti);
+	  }
+	D = function (aa,bb,cc,dd,xi,si,ti)
+	  {
+	  Y( (bitwXor(cc, (bitwOr(bb,bitwNot(dd))))),
+	      aa,bb,xi,si,ti);
+	  }
+############### INTERNAL FUNCTIONS. ###############
+
+
+############### DIGEST ###############
+  a=1732584193; b=-271733879; c=-1732584194; d=271733878;
+  i = 1;
+
+  while(i < (1+L))
+    {
+    oa = a; ob = b; oc = c; od = d;
+
+      a= A(a,b,c,d,x[i],    7, -680876936);
+      d= A(d,a,b,c,x[i+1], 12, -389564586);
+      c= A(c,d,a,b,x[i+2], 17,  606105819);
+      b= A(b,c,d,a,x[i+3], 22, -1044525330);
+
+    a=A(a,b,c,d,x[i+4],    7, -176418897);
+    d=A(d,a,b,c,x[i+5],   12,  1200080426);
+    c=A(c,d,a,b,x[i+6],   17, -1473231341);
+    b=A(b,c,d,a,x[i+7],   22, -45705983);
+
+      a=A(a,b,c,d,x[i+8],  7,  1770035416);
+      d=A(d,a,b,c,x[i+9], 12, -1958414417);
+
+      c=A(c,d,a,b,x[i+10],17, -42063);
+      b=A(b,c,d,a,x[i+11],22, -1990404162);
+
+    a=A(a,b,c,d,x[i+12],   7,  1804603682);
+    d=A(d,a,b,c,x[i+13],  12, -40341101);
+    c=A(c,d,a,b,x[i+14],  17, -1502002290);
+    b=A(b,c,d,a,x[i+15],  22,  1236535329);
+
+      a=B(a,b,c,d,x[i+1],  5, -165796510);
+      d=B(d,a,b,c,x[i+6],  9, -1069501632);
+      c=B(c,d,a,b,x[i+11],14,  643717713);
+      b=B(b,c,d,a,x[i],   20, -373897302);
+
+    a=B(a,b,c,d,x[i+5],    5, -701558691);
+    d=B(d,a,b,c,x[i+10],   9,  38016083);
+    c=B(c,d,a,b,x[i+15],  14, -660478335);
+    b=B(b,c,d,a,x[i+4],   20, -405537848);
+
+      a=B(a,b,c,d,x[i+9],  5,  568446438);
+      d=B(d,a,b,c,x[i+14], 9, -1019803690);
+      c=B(c,d,a,b,x[i+3], 14, -187363961);
+      b=B(b,c,d,a,x[i+8], 20,  1163531501);
+
+    a=B(a,b,c,d,x[i+13],   5, -1444681467);
+    d=B(d,a,b,c,x[i+2],    9, -51403784);
+    c=B(c,d,a,b,x[i+7],   14,  1735328473);
+    b=B(b,c,d,a,x[i+12],  20, -1926607734);
+
+      a=C(a,b,c,d,x[i+5],  4, -378558);
+      d=C(d,a,b,c,x[i+8], 11, -2022574463);
+      c=C(c,d,a,b,x[i+11],16,  1839030562);
+      b=C(b,c,d,a,x[i+14],23, -35309556);
+
+    a=C(a,b,c,d,x[i+1],    4, -1530992060);
+    d=C(d,a,b,c,x[i+4],   11,  1272893353);
+    c=C(c,d,a,b,x[i+7],   16, -155497632);
+    b=C(b,c,d,a,x[i+10],  23, -1094730640);
+
+      a=C(a,b,c,d,x[i+13], 4,  681279174);
+      d=C(d,a,b,c,x[i],   11, -358537222);
+      c=C(c,d,a,b,x[i+3], 16, -722521979);
+      b=C(b,c,d,a,x[i+6], 23,  76029189);
+
+    a=C(a,b,c,d,x[i+9],    4, -640364487);
+    d=C(d,a,b,c,x[i+12],  11, -421815835);
+    c=C(c,d,a,b,x[i+15],  16,  530742520);
+    b=C(b,c,d,a,x[i+2],   23, -995338651);
+
+      a=D(a,b,c,d,x[i],    6, -198630844);
+      d=D(d,a,b,c,x[i+7], 10,  1126891415);
+      c=D(c,d,a,b,x[i+14],15, -1416354905);
+      b=D(b,c,d,a,x[i+5], 21, -57434055);
+
+    a=D(a,b,c,d,x[i+12],   6,  1700485571);
+    d=D(d,a,b,c,x[i+3],   10, -1894986606);
+    c=D(c,d,a,b,x[i+10],  15, -1051523);
+    b=D(b,c,d,a,x[i+1],   21, -2054922799);
+
+      a= D(a,b,c,d,x[i+8],  6,  1873313359);
+      d=D(d,a,b,c,x[i+15],10, -30611744);
+      c=D(c,d,a,b,x[i+6], 15, -1560198380);
+      b=D(b,c,d,a,x[i+13],21,  1309151649);
+
+    a=D(a,b,c,d,x[i+4],    6, -145523070);
+    d=D(d,a,b,c,x[i+11],  10, -1120210379);
+    c=D(c,d,a,b,x[i+2],   15,  718787259);
+    b=D(b,c,d,a,x[i+9],   21, -343485551);
+
+      a=X(a,oa);
+  		b=X(b,ob);
+  		c=X(c,oc);
+  		d=X(d,od);
+
+    i = 16 + i;
+    }
+############### CONVERT TO HEXADECIMAL ###############
+	xb= c(a,b,c,d);
+  o = "";
+  for(i in 0:15)
+    {
+    idx = 1 + bitwAnd( bitwShiftR( xb[ (bitwShiftR(i,2) + 1)] ,  ((i%%4)*8+4)), 0xF);
+      o = paste0(o, charAt(hex,idx) );
+    idx = 1 + bitwAnd( bitwShiftR( xb[ (bitwShiftR(i,2) + 1)] ,  ((i%%4)*8)), 0xF);
+      o = paste0(o, charAt(hex,idx) );
+    }
+	o = setAttribute("xb", xb, o);
+	o;
+  }
+
+
+
+#' .md5_out
+#'
+#' @param xb Vector of 4 integer keys
+#'
+#' @return md5 output of those integer keys
+#' @export
+#'
+#' @examples
+#' .md5_out();
+.md5_out = function(xb = c(-1652748130, -2101990601, 891148395, -702962622))
+  {
+
+  hex = "0123456789abcdef";
+  o = "";
+  for(i in 0:15)
+    {
+    idx = 1 + bitwAnd( bitwShiftR( xb[ (bitwShiftR(i,2) + 1)] ,  ((i%%4)*8+4)), 0xF);
+      o = paste0(o, charAt(hex,idx) );
+    idx = 1 + bitwAnd( bitwShiftR( xb[ (bitwShiftR(i,2) + 1)] ,  ((i%%4)*8)), 0xF);
+      o = paste0(o, charAt(hex,idx) );
+    }
+  o = setAttribute("xb", xb, o);
+  o;
+  }
+
+
+
+is.negative = function(x, ..., tol = sqrt(.Machine$double.eps), part="Re")
+  {
+  more = unlist(list(...)); x = c(x, more);
+  x = if(part == "Im") { x = Im(x); } else { x = Re(x); }
+  x < ( -1 * tol );
+  }
+
+
+
+#' charAt
+#'
+#' Get the character of a string at position [idx]
+#'
+#' @param str String
+#' @param idx position to get character
+#'
+#' @return single character
+#' @export
+#'
+#' @examples
+#'
+#' charAt("Alex", 2);
+#' charAt(c("Hello","there","Alex"), 2);
+#' charAt("Alex", 8);
+#' charAt("Alexander", 8);
+#'
+charAt = function(str,idx)
+  {
+  substr(str,idx,idx);
+  }
+
+#' lastChar
+#'
+#' Get the last character of a string
+#'
+#' @param str String
+#' @param trim should the string be trimmed first
+#'
+#' @return single character
+#' @export
+#'
+#' @examples
+#'
+#' lastChar("Alex");
+#' lastChar(c("Hello","there","Alex"));
+#' lastChar("Sasha");
+#' lastChar("Alexander");
+#'
+lastChar = function(str, trim=TRUE)
+	{
+	# this also works:: ... # .substr(str, -1)
+	if(trim){ str = trimMe(str); }
+	s.len = strlen(str);
+	charAt(str, s.len);
+	}
+
+
+#' charCodeAt
+#'
+#' Get the ASCII character code of a string at position [idx]
+#'
+#' @param str String
+#' @param idx position to get character
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#'
+#' charCodeAt("Alex", 2);
+#' charCodeAt(c("Hello","there","Alex"), 2);
+#' charCodeAt("Alex", 8);
+#' charCodeAt("Alexander", 8);
+#'
+charCodeAt = function(str,idx)
+  {
+  charCode ( charAt(str,idx) ); #  as.numeric( iconv( charAt(str,idx), from="ASCII", to="unicodeFFFE", toRaw=TRUE)[[1]][2] );
+  }
+
+
+#' charCode
+#'
+#' @param svec A vector of characters
+#'
+#' @return ASCII character code for each character
+#' @export
+#'
+#' @examples
+#'
+#' s = "Alexander"; svec = strsplit(s,"",fixed=TRUE)[[1]];
+#' charCode(svec);
+#'
+charCode = function(svec)
+  {
+  # s = "monte";
+  # svec = strsplit(s,"",fixed=TRUE)[[1]];
+  r = c();
+  for(s in svec)
+    {
+    r = c(r, as.numeric( iconv( s, from="ASCII", to="unicodeFFFE", toRaw=TRUE)[[1]][2] ) );
+    }
+  r;
+  }
+
+```
+
+
+
+# C++ MD5
+```{r}
+
+# C:\\_git_\\github\\MonteShaffer\\humanVerse\\cpp
+
+Rcpp::sourceCpp("C:\\_git_\\github\\MonteShaffer\\humanVerse\\HVcpp\\src\\md5.cpp");
+
+### Rcpp::sourceCpp("https://raw.githubusercontent.com/MonteShaffer/humanVerse/main/humanVerse/src/cpp/str.cpp"); # DOESN"T WORK
+
+
+
+```
+
+
+
+## MB
+```{r}
+# http://adv-r.had.co.nz/Rcpp.html
+# https://stackoverflow.com/questions/216823/how-to-trim-a-stdstring
+# https://teuder.github.io/rcpp4everyone_en/180_date.html#operators-date
+# https://gallery.rcpp.org/articles/a-first-boost-example/
+
+str = " jdfldasj djslkfj     ";
+# The available units are nanoseconds ("ns"), microseconds ("us"), milliseconds ("ms"), seconds ("s") and evaluations per seconds ("eps") and relative runtime compared to the best median time ("relative").
+#.Options$microbenchmark.unit = "eps";
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        cpp_md5(str),
+                                        openssl::md5(str),
+                                        md5.digest(str),
+                                        .md5(str),
+                                        
+                                        
+                                        times=1000,
+                                        control=list("order"="random","warmup"=10)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+```
+
+### boxplot
+```{r}
+boxplot(mb.res, horizontal=TRUE);
+```
+
+### efficiency
+```{r}
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+```
+
+
+
+
+## MB times = 10
+```{r}
+# http://adv-r.had.co.nz/Rcpp.html
+# https://stackoverflow.com/questions/216823/how-to-trim-a-stdstring
+# https://teuder.github.io/rcpp4everyone_en/180_date.html#operators-date
+# https://gallery.rcpp.org/articles/a-first-boost-example/
+
+str = " jdfldasj djslkfj     ";
+howmany = 10;
+# The available units are nanoseconds ("ns"), microseconds ("us"), milliseconds ("ms"), seconds ("s") and evaluations per seconds ("eps") and relative runtime compared to the best median time ("relative").
+#.Options$microbenchmark.unit = "eps";
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        cpp_md5(str, howmany),
+                                        md5.digest(str, howmany),
+                                        md5(str, howmany), # openssl
+                                        
+                                        
+                                        times=1000,
+                                        control=list("order"="random","warmup"=10)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+```
+
+### boxplot
+```{r}
+boxplot(mb.res, horizontal=TRUE);
+```
+
+### efficiency
+```{r}
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+```
+
+## MB times = 10, strvec
+```{r}
+# http://adv-r.had.co.nz/Rcpp.html
+# https://stackoverflow.com/questions/216823/how-to-trim-a-stdstring
+# https://teuder.github.io/rcpp4everyone_en/180_date.html#operators-date
+# https://gallery.rcpp.org/articles/a-first-boost-example/
+
+str = " jdfldasj djslkfj     ";
+strvec = c(str, "monte says", " fdlksjflksdj09 02kjdk ");
+howmany = 10;
+# The available units are nanoseconds ("ns"), microseconds ("us"), milliseconds ("ms"), seconds ("s") and evaluations per seconds ("eps") and relative runtime compared to the best median time ("relative").
+#.Options$microbenchmark.unit = "eps";
+options(microbenchmark.unit="ns");
+
+mb.res = microbenchmark::microbenchmark(
+                                        cpp_md5(strvec, howmany),
+                                        md5.digest(strvec, howmany),
+                                        md5(strvec, howmany), # openssl
+                                        
+                                        
+                                        times=1000,
+                                        control=list("order"="random","warmup"=10)
+                                        );
+
+mb.res = setAttribute("microbenchmark.unit",as.character(options("microbenchmark.unit")),mb.res);
+
+mb.res;
+```
+
+### boxplot
+```{r}
+boxplot(mb.res, horizontal=TRUE);
+```
+
+### efficiency
+```{r}
+mb.eff = benchmark.efficiency(mb.res);
+mb.eff;
+```

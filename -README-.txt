@@ -135,14 +135,30 @@ UNIT 02: HELLO "R" WORLD
 					NO SOUND
 					
 		02.020	Test Drive R with its quirks and interdependencies
+		
+					SOUND: VOICE ONLY					
+
+		02.030	Ramping Up
+		
+					SOUND: VOICE ONLY	
+				
+				
+		02.040	Maintenance
+		
+					SOUND: VOICE ONLY	
 
 
-				PYTHON, JAVA, C++, Rtools
-				sin(pi) == 0, workaround
+		02.050	Benchmarking
+		
+					SOUND: VOICE ONLY	
+				
+				
+				get/set seed
+				sin(pi) == 0, workaround isClose
 				which.max vs whichMax ... if is not variadic
-				bin2hex, hex2bin with aliases
 				colors ... include REMOTE ... 
-
+				sort
+				
 
 		02.020	Libraries, R quirks, and functions to workaround quirks
 		
